@@ -131,9 +131,9 @@
         <button class="option-btn wide-btn" onclick="sel(this, 'Свободное время')">🎉 Свободное время</button>
     </div>
 
-    <div class="section-title">Жанр</div>
+    <div class="section-title">Жанр (из файла)</div>
     <div id="genreGrid" class="button-grid" data-group="genre">
-        <div style="font-size:0.8rem; color:#666; padding:10px;">Загрузите файл...</div>
+        <div style="color:#666; font-size:0.8rem; padding:10px;">Загрузите файл...</div>
     </div>
 
     <div class="section-title">Настроение</div>
@@ -157,17 +157,15 @@
     <div class="overlay" id="overlay" onclick="closePopup()"></div>
     <div id="resultPopup">
         <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Результат</div>
-        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.5rem;"></h2>
+        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.3rem; line-height: 1.4;"></h2>
         <p id="resInfo" style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 25px;"></p>
         <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold;">ЗАКРЫТЬ</button>
     </div>
 
     <script>
-        // Демо-данные с НОВЫМИ КОДАМИ
         const demoData = [
-            { "Название": "Побег из Шоушенка", "Жанр": "Драма", "Тип": "FILM" },
-            { "Название": "Друзья", "Жанр": "Комедия", "Тип": "TV_SERIES" },
-            { "Название": "Чернобыль", "Жанр": "Драма", "Тип": "MINI_SERIES" }
+            { "Title": "Побег из Шоушенка", "Genre": "Драма", "Type": "FILM" },
+            { "Title": "Друзья", "Genre": "Комедия", "Type": "TV_SERIES" }
         ];
 
         let db = [];
@@ -192,27 +190,58 @@
                     const data = new Uint8Array(ev.target.result);
                     const wb = XLSX.read(data, {type: 'array'});
                     const sheet = wb.Sheets[wb.SheetNames[0]];
-                    db = XLSX.utils.sheet_to_json(sheet);
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
                     
+                    if (jsonData.length > 0) {
+                        const keys = Object.keys(jsonData[0]);
+                        alert("Найдены колонки: " + keys.join(", "));
+                    }
+
+                    db = jsonData;
                     localStorage.setItem('kinoskill_db', JSON.stringify(db));
                     updateDynamicGrids();
                     document.getElementById('status').innerText = "✅ Файл: " + db.length;
-                    alert("Загружено " + db.length + " строк. Проверьте, что в колонке 'Тип' значения: FILM, TV_SERIES, MINI_SERIES");
                 } catch (err) {
-                    alert("Ошибка чтения: " + err.message);
+                    alert("Ошибка: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
+        // Универсальная функция поиска значения
+        function safeGet(row, keys) {
+            for (let k of keys) {
+                // Ищем точное совпадение или совпадение без учета регистра
+                const foundKey = Object.keys(row).find(objKey => objKey.toLowerCase() === k.toLowerCase());
+                if (foundKey) return row[foundKey];
+            }
+            return null;
+        }
+
+        function getTitle(row) {
+            // Ищем колонку с названием
+            let val = safeGet(row, ['Название', 'Title', 'Name', 'Фильм', 'Movie', 'Russian Title']);
+            if (val) return val;
+            // Если не нашли - берем ПЕРВУЮ колонку
+            const keys = Object.keys(row);
+            if (keys.length > 0) return row[keys[0]];
+            return "Без названия";
+        }
+
+        function getGenre(row) {
+            return safeGet(row, ['Жанр', 'Genre', 'Genres']) || "Жанр?";
+        }
+
+        function getType(row) {
+            return safeGet(row, ['Тип', 'Type', 'Category']) || "";
+        }
+
         function updateDynamicGrids() {
             const source = (db && db.length > 0) ? db : demoData;
+            const genres = [...new Set(source.map(i => getGenre(i)))].filter(g => g && g !== "Жанр?").sort();
             
-            // Получаем уникальные жанры
-            const genres = [...new Set(source.map(i => i.Жанр))].filter(Boolean).sort();
             const gGrid = document.getElementById('genreGrid');
             gGrid.innerHTML = '';
-            
             genres.forEach(item => {
                 const b = document.createElement('button');
                 b.className = 'option-btn';
@@ -225,38 +254,32 @@
         function predict() {
             const currentDB = (db && db.length > 0) ? db : demoData;
 
-            // ФИЛЬТРАЦИЯ
             let filtered = currentDB.filter(m => {
-                // Сравнение ЖАНРА
-                if (choices.genre && m.Жанр !== choices.genre) return false;
-                // Сравнение ТИПА (FILM, TV_SERIES, MINI_SERIES)
-                if (choices.type && m.Тип !== choices.type) return false;
+                const g = getGenre(m);
+                const t = getType(m);
+                
+                if (choices.genre && g !== choices.genre) return false;
+                if (choices.type && t !== choices.type) return false;
                 return true;
             });
 
-            // Если не найдено, пробуем искать только по ТИПУ
             if (filtered.length === 0 && choices.type) {
-                filtered = currentDB.filter(m => m.Тип === choices.type);
+                filtered = currentDB.filter(m => getType(m) === choices.type);
             }
-
             if (filtered.length === 0) {
-                // Если совсем пусто - случайный из всей базы
-                filtered = currentDB; 
-                if (filtered.length === 0) return alert("База пуста!");
+                 // Если совсем пусто - случайный из всей базы
+                 filtered = currentDB;
             }
 
             const m = filtered[Math.floor(Math.random() * filtered.length)];
             
-            // Словарь для красивого отображения типа в результате
-            const typeLabels = {
-                'FILM': 'Фильм',
-                'TV_SERIES': 'Сериал',
-                'MINI_SERIES': 'Мини-сериал'
-            };
-            const displayType = typeLabels[m.Тип] || m.Тип || 'Кино';
+            // Определяем данные для вывода
+            const title = getTitle(m);
+            const genre = getGenre(m);
+            const type = getType(m);
 
-            document.getElementById('resTitle').innerText = m.Название || "Без названия";
-            document.getElementById('resInfo').innerText = `${m.Жанр || ''} • ${displayType}`;
+            document.getElementById('resTitle').innerText = title;
+            document.getElementById('resInfo').innerText = `${genre} • ${type}`;
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('resultPopup').style.display = 'block';
         }
