@@ -25,13 +25,12 @@
             color: var(--text-main);
             margin: 0;
             padding: 20px;
-            padding-bottom: 150px; /* Отступ для нижней кнопки */
+            padding-bottom: 150px;
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; background: linear-gradient(45deg, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        /* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ */
         .mode-switch {
             display: flex;
             background: #222;
@@ -87,7 +86,6 @@
         .option-btn:active { transform: scale(0.96); }
         .option-btn.active { border-color: var(--active-border); background: #383840; color: #fff; font-weight: 500; }
 
-        /* Широкая кнопка для важных фильтров */
         .wide-btn { grid-column: span 2; }
 
         .main-predict-btn {
@@ -105,7 +103,6 @@
 
         input[type="file"] { margin-bottom: 10px; color: var(--text-dim); font-size: 0.8rem; width: 100%; }
         
-        /* Всплывающее окно */
         #resultPopup {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 85%; background: var(--card-bg); padding: 35px 25px; border-radius: 35px; z-index: 1000;
@@ -134,13 +131,6 @@
     <div class="button-grid" data-group="type">
         <button class="option-btn" onclick="sel(this, ['FILM', 'Фильм'])">🎬 Фильм</button>
         <button class="option-btn" onclick="sel(this, ['TV_SERIES', 'Сериал'])">📺 Сериал</button>
-    </div>
-
-    <div class="section-title">Время и Контекст</div>
-    <div class="button-grid" data-group="context">
-        <button class="option-btn" onclick="sel(this, 'Вечер')">🌆 Вечер</button>
-        <button class="option-btn" onclick="sel(this, 'Фон')">🎧 Для фона</button>
-        <button class="option-btn wide-btn" onclick="sel(this, 'Внимательно')">👀 Внимательно</button>
     </div>
 
     <div class="section-title">Настроение</div>
@@ -177,17 +167,18 @@
     </div>
 
     <script>
-        // ========================================================
-        // 👇 ВСТАВЬ СВОЙ КЛЮЧ НИЖЕ (МЕЖДУ КАВЫЧЕК) 👇
+        // ==========================================
+        // 👇 ВСТАВЬ КЛЮЧ МЕЖДУ КАВЫЧКАМИ 👇
+        // ==========================================
         const API_KEY = "AIzaSyBhx6GQ06zolekt13hLNYAH7DkDZsv4yBo"; 
-        // ========================================================
+        // 👆 НЕ СТИРАЙ КАВЫЧКИ " " ВОКРУГ КЛЮЧА! 👆
+        // ==========================================
 
         let currentMode = 'local';
         let db = [];
         let choices = {};
         let colMap = { title: null, genre: null, type: null };
 
-        // Инициализация (чтобы кнопки работали сразу)
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btnLocal').className = `mode-btn ${mode === 'local' ? 'active' : ''}`;
@@ -197,7 +188,6 @@
             else { btn.innerText = "ПОДОБРАТЬ"; btn.classList.remove('ai-mode-btn'); }
         }
 
-        // Выбор фильтра
         function sel(btn, val) {
             const group = btn.parentElement.dataset.group;
             if (btn.classList.contains('active')) {
@@ -207,20 +197,16 @@
             btn.classList.add('active'); choices[group] = val;
         }
 
-        // Загрузка файла
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 try {
                     const data = new Uint8Array(ev.target.result);
                     const wb = XLSX.read(data, {type: 'array'});
-                    
-                    // Поиск листа
                     let targetSheet = wb.SheetNames.find(n => /буду|watch|план/i.test(n)) || wb.SheetNames[0];
                     const sheet = wb.Sheets[targetSheet];
                     const rawData = XLSX.utils.sheet_to_json(sheet, {header: 1});
 
-                    // Поиск шапки
                     let headerRow = 0;
                     for (let i = 0; i < Math.min(rawData.length, 30); i++) {
                         const s = JSON.stringify(rawData[i]).toLowerCase();
@@ -238,12 +224,11 @@
                     db = jsonData;
                     updateDynamicGrids();
                     document.getElementById('status').innerText = `✅ Файл: ${db.length}`;
-                } catch (err) { alert("Ошибка файла: " + err.message); }
+                } catch (err) { alert(err.message); }
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
-        // Отрисовка жанров
         function updateDynamicGrids() {
             const source = db.length > 0 ? db : [];
             const gKey = colMap.genre;
@@ -262,24 +247,19 @@
             });
         }
 
-        // Основная функция запуска
         async function predict() {
-            try {
-                if (currentMode === 'local') runLocalPrediction();
-                else await runAIPrediction();
-            } catch (e) {
-                alert("Ошибка: " + e.message);
-            }
+            if (currentMode === 'local') runLocalPrediction();
+            else await runAIPrediction();
         }
 
         function runLocalPrediction() {
             const tKey = colMap.title || 'Title';
             const gKey = colMap.genre || 'Genre';
             const typeKey = colMap.type || 'Type';
-            
-            if (db.length === 0) return alert("Загрузи Excel файл!");
+            const demoDB = [{[tKey]: "Загрузите файл", [gKey]: "", [typeKey]: ""}];
+            const currentDB = db.length > 0 ? db : demoDB;
 
-            let filtered = db.filter(m => {
+            let filtered = currentDB.filter(m => {
                 if (choices.type && m[typeKey]) {
                     if (!choices.type.some(k => m[typeKey].toUpperCase().includes(k.toUpperCase()))) return false;
                 }
@@ -289,20 +269,15 @@
                 return true;
             });
 
-            if (filtered.length === 0) filtered = db;
+            if (filtered.length === 0) filtered = currentDB;
             const m = filtered[Math.floor(Math.random() * filtered.length)];
 
-            showResult(
-                m[tKey] || "Нет названия",
-                `${m[gKey] || ''}`,
-                choices.mood ? `Подобрано под настроение: ${choices.mood}` : "Случайный выбор из твоего списка."
-            );
+            showResult(m[tKey] || "Нет данных", `${m[gKey] || ''}`, choices.mood ? `Локальный подбор для настроения: ${choices.mood}` : "Случайный выбор из списка.");
         }
 
         async function runAIPrediction() {
-            // Проверка ключа
             if (!API_KEY || API_KEY.length < 10 || API_KEY.includes("ВСТАВЬ")) {
-                alert("⛔️ ОШИБКА: Нет API ключа!\nВставь его в код (строка 395).");
+                alert("⛔️ ОШИБКА: Ты не вставил API ключ!\nНайди строку 'const API_KEY' и вставь ключ МЕЖДУ кавычками.");
                 return;
             }
 
@@ -310,44 +285,40 @@
             const originalText = btn.innerText;
             btn.innerHTML = '<div class="loader"></div> Думаю...';
             
-            // Данные для ИИ
-            const gKey = colMap.genre || 'Genre';
-            const tKey = colMap.title || 'Title';
-            const samples = db.sort(() => 0.5 - Math.random()).slice(0, 15).map(m => m[tKey]).join(", ");
+            const gKey = colMap.genre;
+            const tKey = colMap.title;
+            const samples = db.sort(() => 0.5 - Math.random()).slice(0, 15).map(m => m[tKey] + (m[gKey] ? ` (${m[gKey]})` : '')).join(", ");
 
             const prompt = `
                 Посоветуй фильм/сериал.
-                Параметры:
-                - Настроение: ${choices.mood || "любое"}
-                - Компания: ${choices.company || "неважно"}
-                - Контекст: ${choices.context || "обычный просмотр"}
-                - Тип: ${choices.type ? choices.type[1] : "любой"}
-                - Жанр: ${choices.genre || "любой"}
+                Настроение: ${choices.mood || "любое"}.
+                Компания: ${choices.company || "неважно"}.
+                Тип: ${choices.type ? choices.type[1] : "Фильм или сериал"}.
+                Жанр: ${choices.genre || "на твой выбор"}.
+                Исключи (я уже видел): ${samples || "пока нет данных"}.
                 
-                Исключи (я уже видел): ${samples}.
-                
-                Ответ только JSON:
-                { "title": "Название (год)", "info": "Жанр", "reason": "Почему подходит (2-3 предложения)." }
+                Ответ верни строго в JSON:
+                { "title": "Название", "info": "Год • Жанр", "reason": "Почему подходит." }
             `;
 
             try {
-                // ИСПОЛЬЗУЕМ СТАБИЛЬНУЮ МОДЕЛЬ
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                // ИСПОЛЬЗУЕМ СТАБИЛЬНУЮ МОДЕЛЬ gemini-pro
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
 
                 if (!response.ok) {
-                    if (response.status === 404) throw new Error("Модель не найдена (404).");
-                    if (response.status === 403) throw new Error("Запрещено (403). Включи VPN.");
-                    throw new Error(`Сервер Google: ${response.status}`);
+                    if (response.status === 404) throw new Error("Модель не найдена (404). Проверь ключ.");
+                    if (response.status === 403) throw new Error("Доступ запрещен (403). Включи VPN.");
+                    throw new Error(`Ошибка сервера: ${response.status}`);
                 }
 
                 const data = await response.json();
                 
-                if (!data.candidates || !data.candidates[0]) {
-                    throw new Error("ИИ не ответил (возможно, контент-фильтр).");
+                if (!data.candidates || data.candidates.length === 0) {
+                    throw new Error("ИИ не вернул результат.");
                 }
 
                 const text = data.candidates[0].content.parts[0].text;
