@@ -24,7 +24,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 20px;
-            padding-bottom: 120px; /* Место под кнопку */
+            padding-bottom: 120px;
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
@@ -64,7 +64,6 @@
             background: #2c2d35;
         }
 
-        /* Специальный стиль для длинных кнопок (Свободное время) */
         .wide-btn { grid-column: span 2; }
 
         .main-predict-btn {
@@ -80,6 +79,7 @@
             font-weight: bold;
             font-size: 1.1rem;
             z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         input[type="file"] { margin-bottom: 10px; color: var(--text-dim); font-size: 0.8rem; }
@@ -109,6 +109,13 @@
 
     <input type="file" id="fileInput" accept=".xlsx, .xls">
 
+    <div class="section-title">Тип</div>
+    <div class="button-grid" data-group="type">
+        <button class="option-btn" onclick="sel(this, 'Фильм')">🎬 Фильм</button>
+        <button class="option-btn" onclick="sel(this, 'Сериал')">📺 Сериал</button>
+        <button class="option-btn" onclick="sel(this, 'Мини-сериал')">🎞️ Мини</button>
+    </div>
+
     <div class="section-title">Время дня</div>
     <div class="button-grid" data-group="time">
         <button class="option-btn" onclick="sel(this, 'Утро')">🌅 Утро</button>
@@ -122,13 +129,6 @@
         <button class="option-btn" onclick="sel(this, 'Работа')">💼 Работа</button>
         <button class="option-btn" onclick="sel(this, 'Перерыв')">☕ Перерыв</button>
         <button class="option-btn wide-btn" onclick="sel(this, 'Свободное время')">🎉 Свободное время</button>
-    </div>
-
-    <div class="section-title">Формат</div>
-    <div class="button-grid" data-group="format">
-        <button class="option-btn" onclick="sel(this, 'Короткий')">⚡ Короткий</button>
-        <button class="option-btn" onclick="sel(this, 'Средний')">🎬 Средний</button>
-        <button class="option-btn" onclick="sel(this, 'Длинный')">🍿 Длинный</button>
     </div>
 
     <div class="section-title">Жанр</div>
@@ -166,6 +166,15 @@
 
         function sel(btn, val) {
             const group = btn.parentElement.dataset.group;
+            
+            // Если нажимаем на ту же кнопку - снимаем выделение
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                delete choices[group];
+                return;
+            }
+
+            // Иначе выделяем новую
             btn.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             choices[group] = val;
@@ -198,11 +207,25 @@
         }
 
         function predict() {
-            if (db.length === 0) return alert("Загрузи Excel!");
+            if (db.length === 0) return alert("Сначала загрузите Excel файл!");
             
-            let filtered = db.filter(m => !choices.genre || m.Жанр === choices.genre);
-            const m = filtered.length > 0 ? filtered[Math.floor(Math.random()*filtered.length)] : db[Math.floor(Math.random()*db.length)];
+            // Фильтрация: ищем точное совпадение по Жанру и Типу (если они выбраны)
+            let filtered = db.filter(m => 
+                (!choices.genre || m.Жанр === choices.genre) &&
+                (!choices.type || m.Тип === choices.type)
+            );
+
+            // Если ничего не нашли, пробуем искать только по Типу (фильм/сериал)
+            if (filtered.length === 0 && choices.type) {
+                filtered = db.filter(m => m.Тип === choices.type);
+            }
+
+            // Выбираем случайный из найденных (или из всей базы, если совсем ничего нет)
+            const m = filtered.length > 0 
+                ? filtered[Math.floor(Math.random()*filtered.length)] 
+                : db[Math.floor(Math.random()*db.length)];
             
+            // Показываем результат
             document.getElementById('resTitle').innerText = m.Название;
             document.getElementById('resInfo').innerText = `${m.Жанр} • ${m.Тип || 'Кино'}`;
             document.getElementById('overlay').style.display = 'block';
