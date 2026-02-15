@@ -24,7 +24,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 20px;
-            padding-bottom: 120px;
+            padding-bottom: 140px;
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
@@ -57,11 +57,13 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            text-align: center;
         }
 
         .option-btn.active {
             border-color: var(--active-border);
             background: #2c2d35;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
 
         .wide-btn { grid-column: span 2; }
@@ -89,13 +91,14 @@
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
+            width: 85%;
             background: var(--card-bg);
             padding: 30px;
             border-radius: 32px;
             z-index: 1000;
             border: 1px solid #333;
             text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; }
     </style>
@@ -145,47 +148,51 @@
         <button class="option-btn" onclick="sel(this, 'Грустное')">😢 Грустное</button>
     </div>
 
+    <div class="section-title">Компания</div>
+    <div class="button-grid" data-group="company">
+        <button class="option-btn" onclick="sel(this, 'Один')">🧑 Один</button>
+        <button class="option-btn" onclick="sel(this, 'Вдвоём')">👫 Вдвоём</button>
+        <button class="option-btn" onclick="sel(this, 'Компания')">👥 Компания</button>
+    </div>
+
     <button class="main-predict-btn" onclick="predict()">ПОДОБРАТЬ</button>
 
     <div class="overlay" id="overlay" onclick="closePopup()"></div>
     <div id="resultPopup">
-        <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Результат</div>
-        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.5rem;"></h2>
-        <p id="resInfo" style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 25px;"></p>
-        <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold;">ЗАКРЫТЬ</button>
+        <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Лучший выбор</div>
+        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.5rem; line-height: 1.3;"></h2>
+        <p id="resInfo" style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 20px;"></p>
+        <div id="resReason" style="font-size: 0.85rem; background: #222; padding: 10px; border-radius: 10px; color: #ccc;"></div>
+        <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold; margin-top: 20px;">ОТЛИЧНО</button>
     </div>
 
     <script>
-        // Демонстрационные данные на случай, если файл не загружен
-        const demoData = [
-            { "Title": "Побег из Шоушенка", "Genre": "Драма", "Type": "FILM" },
-            { "Title": "Друзья", "Genre": "Комедия", "Type": "TV_SERIES" }
-        ];
-
+        const demoData = [{ "Title": "Пример фильма", "Genre": "Драма", "Type": "FILM" }];
         let db = [];
         let choices = {};
-        
-        // Карта для хранения найденных имен колонок
         let colMap = { title: null, genre: null, type: null }; 
 
-        // Выбор кнопки
+        // Карта настроений (Связь Настроения с Жанрами)
+        const moodMapping = {
+            'Весёлое': ['комедия', 'comedy', 'мультфильм', 'animation', 'приключения', 'adventure', 'семейный'],
+            'Задумчивое': ['драма', 'drama', 'биография', 'biography', 'документальный', 'docu'],
+            'Азарт': ['боевик', 'action', 'триллер', 'thriller', 'криминал', 'crime', 'фантастика'],
+            'Спокойное': ['мелодрама', 'romance', 'история', 'history'],
+            'Грустное': ['драма', 'drama', 'мелодрама']
+        };
+
         function sel(btn, val) {
             const group = btn.parentElement.dataset.group;
-            
-            // Если кнопка уже активна — отключаем
             if (btn.classList.contains('active')) {
                 btn.classList.remove('active');
                 delete choices[group];
                 return;
             }
-
-            // Иначе включаем
             btn.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             choices[group] = val; 
         }
 
-        // ОБРАБОТКА ФАЙЛА
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
@@ -193,80 +200,68 @@
                     const data = new Uint8Array(ev.target.result);
                     const wb = XLSX.read(data, {type: 'array'});
                     
-                    // 1. Ищем лист "Буду смотреть"
-                    let targetSheetName = wb.SheetNames.find(n => 
-                        n.toLowerCase().includes("буду") || 
-                        n.toLowerCase().includes("watch") ||
-                        n.toLowerCase().includes("план")
-                    );
-
-                    // Если не нашли "Буду смотреть", берем первый попавшийся (но предупредим, если это Дашборд)
-                    if (!targetSheetName) {
-                        targetSheetName = wb.SheetNames[0];
-                        alert("Лист 'Буду смотреть' не найден. Использую первый лист: " + targetSheetName);
-                    } else {
-                        // alert("Использую лист: " + targetSheetName);
-                    }
-
-                    const sheet = wb.Sheets[targetSheetName];
+                    // 1. Умный поиск листа "Буду смотреть"
+                    let targetSheet = wb.SheetNames.find(n => /буду|watch|план/i.test(n)) || wb.SheetNames[0];
+                    const sheet = wb.Sheets[targetSheet];
                     
-                    // 2. Читаем "сырые" данные, чтобы найти заголовок
+                    // 2. Поиск заголовков (пропуск мусора сверху)
                     const rawData = XLSX.utils.sheet_to_json(sheet, {header: 1});
-                    if (!rawData || rawData.length === 0) return alert("Лист пуст!");
-
-                    // 3. Сканируем строки, пока не найдем "Название"
                     let headerRowIndex = 0;
                     for (let i = 0; i < Math.min(rawData.length, 30); i++) {
-                        const rowStr = JSON.stringify(rawData[i]).toLowerCase();
-                        if (rowStr.includes("название") || rowStr.includes("title") || rowStr.includes("фильм")) {
+                        const s = JSON.stringify(rawData[i]).toLowerCase();
+                        if (s.includes("название") || s.includes("title")) {
                             headerRowIndex = i;
                             break;
                         }
                     }
 
-                    // 4. Парсим таблицу начиная с найденной строки
+                    // 3. Чтение данных
                     const jsonData = XLSX.utils.sheet_to_json(sheet, {range: headerRowIndex});
-                    
-                    if (jsonData.length === 0) return alert("Не удалось найти фильмы на листе " + targetSheetName);
+                    if (jsonData.length === 0) return alert("Файл пуст!");
 
-                    // 5. Определяем колонки
+                    // 4. Определение колонок
                     const keys = Object.keys(jsonData[0]);
-                    colMap.title = keys.find(k => /название|title|name|фильм/i.test(k)) || keys[0];
+                    colMap.title = keys.find(k => /название|title|name/i.test(k)) || keys[0];
                     colMap.genre = keys.find(k => /жанр|genre/i.test(k));
-                    colMap.type = keys.find(k => /тип|type|category/i.test(k));
+                    colMap.type = keys.find(k => /тип|type/i.test(k));
 
                     db = jsonData;
                     localStorage.setItem('kinoskill_db', JSON.stringify(db));
                     localStorage.setItem('kinoskill_map', JSON.stringify(colMap));
                     
                     updateDynamicGrids();
-                    document.getElementById('status').innerText = `✅ Лист: ${targetSheetName} (${db.length})`;
+                    document.getElementById('status').innerText = `✅ ${targetSheet}: ${db.length}`;
 
                 } catch (err) {
-                    alert("Ошибка чтения: " + err.message);
+                    alert("Ошибка: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
+        // ГЕНЕРАЦИЯ КНОПОК ЖАНРОВ (Без чехарды!)
         function updateDynamicGrids() {
             const source = (db && db.length > 0) ? db : demoData;
             const gKey = colMap.genre || 'Genre';
             
-            // Собираем уникальные жанры
-            const genres = new Set();
+            const genresSet = new Set();
+            
             source.forEach(row => {
-                if (row[gKey]) genres.add(row[gKey]);
+                const rawG = row[gKey];
+                if (rawG) {
+                    // Разбиваем по запятой или слэшу
+                    const parts = rawG.toString().split(/,|;|\//);
+                    parts.forEach(p => {
+                        const clean = p.trim(); // Убираем пробелы
+                        if (clean.length > 2) genresSet.add(clean); // Игнорируем мусор
+                    });
+                }
             });
 
-            const sortedGenres = [...genres].sort();
+            const sortedGenres = [...genresSet].sort();
             const gGrid = document.getElementById('genreGrid');
             gGrid.innerHTML = '';
             
-            if (sortedGenres.length === 0) {
-                 gGrid.innerHTML = '<div style="color:#666; font-size:0.8rem">Жанры не найдены</div>';
-            }
-
             sortedGenres.forEach(item => {
                 const b = document.createElement('button');
                 b.className = 'option-btn';
@@ -282,41 +277,63 @@
             const gKey = colMap.genre || 'Genre';
             const typeKey = colMap.type || 'Type';
 
+            // 1. ФИЛЬТРАЦИЯ
             let filtered = currentDB.filter(m => {
-                const mGenre = m[gKey];
-                const mType = m[typeKey]; // FILM, TV_SERIES...
+                const mGenre = (m[gKey] || "").toString().toLowerCase();
+                const mType = (m[typeKey] || "").toString().toUpperCase();
 
-                // 1. Фильтр по жанру
-                if (choices.genre && mGenre !== choices.genre) return false;
-
-                // 2. Фильтр по типу (FILM vs TV_SERIES)
-                if (choices.type && mType) {
-                    // choices.type — это массив ['FILM', 'Фильм']
-                    // Проверяем, есть ли одно из этих слов в ячейке Excel
-                    const match = choices.type.some(keyword => 
-                        mType.toString().toUpperCase().includes(keyword.toUpperCase())
-                    );
+                // Фильтр по типу
+                if (choices.type) {
+                    const match = choices.type.some(k => mType.includes(k.toUpperCase()));
                     if (!match) return false;
                 }
+
+                // Фильтр по жанру (строгое соответствие кнопки)
+                if (choices.genre) {
+                    // Проверяем, содержится ли выбранный жанр в строке жанров фильма
+                    if (!mGenre.includes(choices.genre.toLowerCase())) return false;
+                }
+
+                // Фильтр по настроению (ТОЛЬКО если жанр НЕ выбран вручную)
+                if (!choices.genre && choices.mood) {
+                    const allowedKeywords = moodMapping[choices.mood] || [];
+                    const matchesMood = allowedKeywords.some(k => mGenre.includes(k));
+                    if (!matchesMood) return false;
+                }
+
                 return true;
             });
 
-            // Если ничего не нашли, пробуем искать только по типу (игнорируя жанр)
-            if (filtered.length === 0 && choices.type) {
+            // Если слишком строго, расслабляем фильтр (убираем настроение)
+            if (filtered.length === 0 && choices.mood && !choices.genre) {
                 filtered = currentDB.filter(m => {
-                    const mType = m[typeKey];
-                    return mType && choices.type.some(k => mType.toString().toUpperCase().includes(k.toUpperCase()));
+                    if (choices.type) {
+                        const mType = (m[typeKey] || "").toUpperCase();
+                        return choices.type.some(k => mType.includes(k.toUpperCase()));
+                    }
+                    return true;
                 });
             }
 
-            // Если совсем пусто — берем всю базу
             if (filtered.length === 0) filtered = currentDB;
 
-            // Выбираем случайный
+            // ВЫБОР
             const m = filtered[Math.floor(Math.random() * filtered.length)];
 
+            // ОТОБРАЖЕНИЕ
             document.getElementById('resTitle').innerText = m[tKey] || "Без названия";
             document.getElementById('resInfo').innerText = `${m[gKey] || ''} • ${m[typeKey] || ''}`;
+            
+            // Генерация умного текста
+            let reasonText = "";
+            if (choices.company === 'Вдвоём') reasonText += "Идеально для просмотра вдвоём. ";
+            else if (choices.company === 'Компания') reasonText += "Отличный выбор для компании друзей. ";
+            
+            if (choices.mood) reasonText += `Подходит под настроение "${choices.mood}".`;
+            else reasonText += "Случайный выбор из списка.";
+
+            document.getElementById('resReason').innerText = reasonText;
+
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('resultPopup').style.display = 'block';
         }
@@ -326,20 +343,16 @@
             document.getElementById('resultPopup').style.display = 'none';
         }
 
-        // При загрузке страницы восстанавливаем данные
         window.onload = () => {
             const savedDB = localStorage.getItem('kinoskill_db');
             const savedMap = localStorage.getItem('kinoskill_map');
-            
             if (savedDB) {
                 try {
                     db = JSON.parse(savedDB);
-                    document.getElementById('status').innerText = `✅ В памяти: ${db.length} фильмов`;
-                } catch(e) {}
+                    document.getElementById('status').innerText = `✅ В базе: ${db.length}`;
+                } catch(e){}
             }
-            if (savedMap) {
-                try { colMap = JSON.parse(savedMap); } catch(e) {}
-            }
+            if (savedMap) try { colMap = JSON.parse(savedMap); } catch(e){}
             updateDynamicGrids();
         };
     </script>
