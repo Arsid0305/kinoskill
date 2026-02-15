@@ -8,73 +8,31 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        :root {
-            --bg: #0f1014;
-            --card-bg: #1c1d22;
-            --btn-bg: #26282f;
-            --accent: #bb86fc;
-            --ai-color: #03dac6;
-            --text-main: #ffffff;
-            --text-dim: #8e8e93;
-            --active-border: #ffffff;
-        }
-
-        body {
-            font-family: -apple-system, system-ui, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            padding-bottom: 140px;
-        }
-
+        :root { --bg: #0f1014; --card-bg: #1c1d22; --btn-bg: #26282f; --accent: #bb86fc; --ai: #03dac6; --text: #fff; --dim: #8e8e93; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; padding-bottom: 140px; margin: 0; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
-
-        .mode-switch {
-            display: flex;
-            background: #222;
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 20px;
-        }
-        .mode-btn {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #777;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .mode-btn.active { color: #000; background: var(--text-main); }
-        .mode-btn.ai-active { background: var(--ai-color); color: #000; box-shadow: 0 0 15px rgba(3, 218, 198, 0.4); }
-
-        .section-title { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin: 24px 0 12px 5px; }
-        .button-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px; }
-        .option-btn { background: var(--btn-bg); border: 1px solid transparent; color: var(--text-main); padding: 14px 10px; border-radius: 16px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; }
-        .option-btn.active { border-color: var(--active-border); background: #2c2d35; }
-        .wide-btn { grid-column: span 2; }
-
-        .main-predict-btn {
-            position: fixed; bottom: 40px; left: 20px; right: 20px;
-            background: #ffffff; color: #000; border: none; padding: 20px;
-            border-radius: 22px; font-weight: bold; font-size: 1.1rem; z-index: 100;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.3s;
-        }
-        .ai-mode-btn { background: linear-gradient(135deg, #03dac6, #018786) !important; color: #000 !important; box-shadow: 0 10px 30px rgba(3, 218, 198, 0.3) !important; }
-
-        input[type="file"] { margin-bottom: 10px; color: var(--text-dim); font-size: 0.8rem; }
+        .logo { font-size: 1.5rem; font-weight: bold; }
         
-        #resultPopup {
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; background: var(--card-bg); padding: 30px; border-radius: 32px; z-index: 1000;
-            border: 1px solid #333; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
-        }
-        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; }
-        .loader { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.3); border-radius: 50%; border-top-color: #000; animation: spin 1s infinite; }
+        /* ПЕРЕКЛЮЧАТЕЛЬ */
+        .mode-switch { display: flex; background: #222; border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+        .mode-btn { flex: 1; padding: 12px; text-align: center; border-radius: 10px; font-weight: bold; color: #777; cursor: pointer; transition: 0.2s; }
+        .mode-btn.active { color: #000; background: #fff; }
+        .mode-btn.ai-active { background: var(--ai); color: #000; box-shadow: 0 0 15px rgba(3,218,198,0.4); }
+
+        .section-title { font-size: 0.75rem; color: var(--dim); text-transform: uppercase; margin: 20px 0 10px 5px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+        .btn { background: var(--btn-bg); border: 1px solid transparent; color: var(--text); padding: 14px; border-radius: 16px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .btn.active { border-color: #fff; background: #333; }
+        
+        .main-btn { position: fixed; bottom: 40px; left: 20px; right: 20px; background: #fff; color: #000; border: none; padding: 20px; border-radius: 22px; font-weight: bold; font-size: 1.1rem; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .ai-btn { background: linear-gradient(135deg, #03dac6, #00bfa5) !important; color: #000 !important; }
+
+        input[type="file"] { margin-bottom: 15px; color: var(--dim); font-size: 0.8rem; }
+        
+        /* POPUP */
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 998; }
+        #popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; background: var(--card-bg); padding: 30px; border-radius: 30px; z-index: 999; text-align: center; border: 1px solid #333; }
+        .loader { display: inline-block; width: 15px; height: 15px; border: 3px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 1s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -82,236 +40,188 @@
 
     <div class="header">
         <div class="logo">КИНО</div>
-        <div style="font-size: 0.7rem; color: var(--text-dim);" id="status">Загрузи файл</div>
+        <div style="font-size: 0.7rem; color: var(--dim);" id="status">Нет файла</div>
     </div>
 
     <div class="mode-switch">
-        <div id="btnLocal" class="mode-btn active" onclick="setMode('local')">📂 Мои фильмы</div>
-        <div id="btnAI" class="mode-btn" onclick="setMode('ai')">✨ ИИ Подбор</div>
+        <div id="mLocal" class="mode-btn active" onclick="setMode('local')">📂 Мои</div>
+        <div id="mAI" class="mode-btn" onclick="setMode('ai')">✨ ИИ</div>
     </div>
 
     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
 
     <div class="section-title">Тип</div>
-    <div class="button-grid" data-group="type">
-        <button class="option-btn" onclick="sel(this, ['FILM', 'Фильм'])">🎬 Фильм</button>
-        <button class="option-btn" onclick="sel(this, ['TV_SERIES', 'Сериал'])">📺 Сериал</button>
+    <div class="grid" data-g="type">
+        <button class="btn" onclick="sel(this, ['FILM', 'Фильм'])">🎬 Фильм</button>
+        <button class="btn" onclick="sel(this, ['TV_SERIES', 'Сериал'])">📺 Сериал</button>
     </div>
 
     <div class="section-title">Настроение</div>
-    <div class="button-grid" data-group="mood">
-        <button class="option-btn" onclick="sel(this, 'Весёлое')">😊 Весёлое</button>
-        <button class="option-btn" onclick="sel(this, 'Задумчивое')">🤔 Задумчивое</button>
-        <button class="option-btn" onclick="sel(this, 'Азарт')">🔥 Азарт</button>
-        <button class="option-btn" onclick="sel(this, 'Спокойное')">😌 Спокойное</button>
-        <button class="option-btn" onclick="sel(this, 'Грустное')">😢 Грустное</button>
+    <div class="grid" data-g="mood">
+        <button class="btn" onclick="sel(this, 'Весёлое')">😊 Весёлое</button>
+        <button class="btn" onclick="sel(this, 'Задумчивое')">🤔 Думать</button>
+        <button class="btn" onclick="sel(this, 'Азарт')">🔥 Азарт</button>
+        <button class="btn" onclick="sel(this, 'Спокойное')">😌 Релакс</button>
+        <button class="btn" onclick="sel(this, 'Грустное')">😢 Грусть</button>
     </div>
 
     <div class="section-title">Компания</div>
-    <div class="button-grid" data-group="company">
-        <button class="option-btn" onclick="sel(this, 'Один')">🧑 Один</button>
-        <button class="option-btn" onclick="sel(this, 'Вдвоём')">👫 Вдвоём</button>
-        <button class="option-btn" onclick="sel(this, 'Компания')">👥 Компания</button>
+    <div class="grid" data-g="company">
+        <button class="btn" onclick="sel(this, 'Один')">🧑 Один</button>
+        <button class="btn" onclick="sel(this, 'Вдвоём')">👫 Вдвоём</button>
+        <button class="btn" onclick="sel(this, 'Компания')">👥 Группа</button>
     </div>
 
     <div class="section-title">Жанр (из файла)</div>
-    <div id="genreGrid" class="button-grid" data-group="genre">
-        <div style="font-size:0.8rem; opacity:0.5; padding:5px;">Загрузи файл...</div>
+    <div id="genreBox" class="grid" data-g="genre" style="min-height: 50px;">
+        <div style="font-size:0.8rem; opacity:0.5; padding:5px;">Загрузите файл...</div>
     </div>
 
-    <button id="mainBtn" class="main-predict-btn" onclick="predict()">ПОДОБРАТЬ</button>
+    <button id="mainBtn" class="main-btn" onclick="run()">ПОДОБРАТЬ</button>
 
-    <div class="overlay" id="overlay" onclick="closePopup()"></div>
-    <div id="resultPopup">
-        <div id="resLabel" style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Результат</div>
-        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.5rem; line-height: 1.3;"></h2>
-        <p id="resInfo" style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 20px;"></p>
-        <div id="resReason" style="font-size: 0.9rem; background: #2a2a2a; padding: 15px; border-radius: 15px; color: #ddd; line-height: 1.5;"></div>
-        <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold; margin-top: 20px;">КРУТО</button>
+    <div class="overlay" id="ovl" onclick="closeP()"></div>
+    <div id="popup">
+        <h2 id="pTitle" style="margin:0 0 10px; font-size:1.4rem;"></h2>
+        <p id="pInfo" style="color:var(--dim); font-size:0.9rem;"></p>
+        <div id="pReason" style="background:#252525; padding:15px; border-radius:15px; margin-top:15px; font-size:0.9rem; color:#ddd;"></div>
+        <button onclick="closeP()" style="width:100%; padding:15px; margin-top:20px; border-radius:15px; border:none; background:#fff; font-weight:bold;">ЗАКРЫТЬ</button>
     </div>
 
     <script>
         // ==========================================
-        // 👇 ВСТАВЬ СВОЙ КЛЮЧ AIza... МЕЖДУ КАВЫЧКАМИ 👇
-        // ==========================================
+        // 👇 ВСТАВЬ КЛЮЧ НИЖЕ, НЕ УДАЛЯЯ КАВЫЧКИ 👇
         const API_KEY = "AIzaSyBhx6GQ06zolekt13hLNYAH7DkDZsv4yBo"; 
         // ==========================================
 
-        let currentMode = 'local';
+        let mode = 'local';
         let db = [];
-        let choices = {};
-        let colMap = { title: null, genre: null, type: null };
+        let picks = {};
+        let map = { t: null, g: null, type: null };
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('btnLocal').className = `mode-btn ${mode === 'local' ? 'active' : ''}`;
-            document.getElementById('btnAI').className = `mode-btn ${mode === 'ai' ? 'ai-active' : ''}`;
+        function setMode(m) {
+            mode = m;
+            document.getElementById('mLocal').className = `mode-btn ${m==='local'?'active':''}`;
+            document.getElementById('mAI').className = `mode-btn ${m==='ai'?'ai-active':''}`;
             const btn = document.getElementById('mainBtn');
-            if (mode === 'ai') { btn.innerText = "✨ СПРОСИТЬ ИИ"; btn.classList.add('ai-mode-btn'); }
-            else { btn.innerText = "ПОДОБРАТЬ"; btn.classList.remove('ai-mode-btn'); }
+            if(m==='ai') { btn.innerText = "✨ СПРОСИТЬ ИИ"; btn.classList.add('ai-btn'); }
+            else { btn.innerText = "ПОДОБРАТЬ"; btn.classList.remove('ai-btn'); }
         }
 
-        function sel(btn, val) {
-            const group = btn.parentElement.dataset.group;
-            if (btn.classList.contains('active')) {
-                btn.classList.remove('active'); delete choices[group]; return;
+        function sel(el, val) {
+            const grp = el.parentElement.dataset.g;
+            if(el.classList.contains('active')) {
+                el.classList.remove('active'); delete picks[grp];
+            } else {
+                el.parentElement.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));
+                el.classList.add('active'); picks[grp] = val;
             }
-            btn.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active'); choices[group] = val;
         }
 
+        // Загрузка файла
         document.getElementById('fileInput').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
+            const r = new FileReader();
+            r.onload = (ev) => {
                 try {
-                    const data = new Uint8Array(ev.target.result);
-                    const wb = XLSX.read(data, {type: 'array'});
-                    let targetSheet = wb.SheetNames.find(n => /буду|watch|план/i.test(n)) || wb.SheetNames[0];
-                    const sheet = wb.Sheets[targetSheet];
-                    const rawData = XLSX.utils.sheet_to_json(sheet, {header: 1});
-
-                    let headerRow = 0;
-                    for (let i = 0; i < Math.min(rawData.length, 30); i++) {
-                        const s = JSON.stringify(rawData[i]).toLowerCase();
-                        if (s.includes("название") || s.includes("title")) { headerRow = i; break; }
+                    const d = new Uint8Array(ev.target.result);
+                    const wb = XLSX.read(d, {type:'array'});
+                    const sName = wb.SheetNames.find(n=>/буду|watch|план/i.test(n)) || wb.SheetNames[0];
+                    const sheet = wb.Sheets[sName];
+                    const raw = XLSX.utils.sheet_to_json(sheet, {header:1});
+                    let skip = 0;
+                    for(let i=0; i<Math.min(raw.length,30); i++) {
+                        if(JSON.stringify(raw[i]).toLowerCase().includes('название')) { skip=i; break; }
                     }
-
-                    const jsonData = XLSX.utils.sheet_to_json(sheet, {range: headerRow});
-                    if (jsonData.length === 0) return alert("Файл пуст!");
-
-                    const keys = Object.keys(jsonData[0]);
-                    colMap.title = keys.find(k => /название|title/i.test(k)) || keys[0];
-                    colMap.genre = keys.find(k => /жанр|genre/i.test(k));
-                    colMap.type = keys.find(k => /тип|type/i.test(k));
-
-                    db = jsonData;
-                    updateDynamicGrids();
-                    document.getElementById('status').innerText = `✅ Файл: ${db.length} фильмов`;
-                } catch (err) { alert(err.message); }
+                    const json = XLSX.utils.sheet_to_json(sheet, {range:skip});
+                    if(!json.length) return alert('Файл пуст');
+                    
+                    const k = Object.keys(json[0]);
+                    map.t = k.find(x=>/название|title/i.test(x)) || k[0];
+                    map.g = k.find(x=>/жанр|genre/i.test(x));
+                    map.type = k.find(x=>/тип|type/i.test(x));
+                    
+                    db = json;
+                    drawGenres();
+                    document.getElementById('status').innerText = `✅ ${db.length} фильмов`;
+                } catch(e) { alert('Ошибка файла: '+e.message); }
             };
-            reader.readAsArrayBuffer(e.target.files[0]);
+            r.readAsArrayBuffer(e.target.files[0]);
         });
 
-        function updateDynamicGrids() {
-            const source = db.length > 0 ? db : [];
-            const gKey = colMap.genre;
-            if (!gKey) return;
-            const genresSet = new Set();
-            source.forEach(row => {
-                if (row[gKey]) row[gKey].toString().split(/,|;|\//).forEach(p => genresSet.add(p.trim()));
+        function drawGenres() {
+            if(!map.g) return;
+            const set = new Set();
+            db.forEach(r => {
+                if(r[map.g]) r[map.g].toString().split(/,|;|\//).forEach(s => set.add(s.trim()));
             });
-            const sorted = [...genresSet].sort();
-            const grid = document.getElementById('genreGrid');
-            grid.innerHTML = '';
-            sorted.forEach(item => {
+            const box = document.getElementById('genreBox');
+            box.innerHTML = '';
+            [...set].sort().forEach(g => {
                 const b = document.createElement('button');
-                b.className = 'option-btn'; b.innerText = item;
-                b.onclick = () => sel(b, item); grid.appendChild(b);
+                b.className = 'btn'; b.innerText = g;
+                b.onclick = () => sel(b, g);
+                box.appendChild(b);
             });
         }
 
-        async function predict() {
-            if (currentMode === 'local') runLocalPrediction();
-            else await runAIPrediction();
-        }
-
-        function runLocalPrediction() {
-            const tKey = colMap.title || 'Title';
-            const gKey = colMap.genre || 'Genre';
-            const typeKey = colMap.type || 'Type';
-            const demoDB = [{[tKey]: "Загрузите файл", [gKey]: "", [typeKey]: ""}];
-            const currentDB = db.length > 0 ? db : demoDB;
-
-            let filtered = currentDB.filter(m => {
-                if (choices.type && m[typeKey]) {
-                    if (!choices.type.some(k => m[typeKey].toUpperCase().includes(k.toUpperCase()))) return false;
-                }
-                if (choices.genre && m[gKey]) {
-                    if (!m[gKey].toLowerCase().includes(choices.genre.toLowerCase())) return false;
-                }
-                return true;
-            });
-
-            if (filtered.length === 0) filtered = currentDB;
-            const m = filtered[Math.floor(Math.random() * filtered.length)];
-
-            showResult(m[tKey] || "Нет данных", `${m[gKey] || ''}`, choices.mood ? `Локальный подбор для настроения: ${choices.mood}` : "Случайный выбор из списка.");
-        }
-
-        async function runAIPrediction() {
-            // ПРОВЕРКА КЛЮЧА
-            if (!API_KEY || API_KEY.length < 10 || API_KEY.includes("ВСТАВЬ")) {
-                alert("⛔️ ОШИБКА: Ты не вставил API ключ в код!\n1. Открой файл index.html в редакторе.\n2. Найди строку 'const API_KEY'.\n3. Вставь туда свой ключ от Google AI Studio.");
-                return;
-            }
-
-            const btn = document.getElementById('mainBtn');
-            const originalText = btn.innerText;
-            btn.innerHTML = '<div class="loader"></div> Думаю...';
-            
-            // Подготовка данных для ИИ
-            const gKey = colMap.genre;
-            const tKey = colMap.title;
-            const samples = db.sort(() => 0.5 - Math.random()).slice(0, 15).map(m => m[tKey] + (m[gKey] ? ` (${m[gKey]})` : '')).join(", ");
-
-            const prompt = `
-                Я хочу посмотреть кино.
-                Мои условия:
-                - Настроение: ${choices.mood || "любое"}
-                - Компания: ${choices.company || "неважно"}
-                - Тип: ${choices.type ? choices.type[1] : "Фильм или сериал"}
-                - Жанр: ${choices.genre || "на твой выбор"}
+        async function run() {
+            if(mode === 'local') {
+                if(!db.length) return alert('Сначала загрузи файл!');
                 
-                Мои любимые фильмы (контекст): ${samples || "пока нет данных"}.
-                
-                ЗАДАЧА: Порекомендуй ОДИН фильм, которого НЕТ в моем списке.
-                Ответ верни строго в JSON формате:
-                { "title": "Название", "info": "Год • Жанр", "reason": "Почему подходит." }
-            `;
-
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                let pool = db.filter(m => {
+                    if(picks.type && m[map.type]) {
+                        if(!picks.type.some(t => m[map.type].toUpperCase().includes(t.toUpperCase()))) return false;
+                    }
+                    if(picks.genre && m[map.g]) {
+                        if(!m[map.g].toLowerCase().includes(picks.genre.toLowerCase())) return false;
+                    }
+                    return true;
                 });
-
-                if (!response.ok) {
-                    if (response.status === 400) throw new Error("Неверный API ключ.");
-                    if (response.status === 403) throw new Error("Доступ заблокирован (включи VPN).");
-                    throw new Error(`Ошибка сервера: ${response.status}`);
-                }
-
-                const data = await response.json();
                 
-                if (!data.candidates || data.candidates.length === 0) {
-                    throw new Error("ИИ не вернул ответ. Возможно, сработал фильтр контента.");
+                if(!pool.length) pool = db; // Если пусто, берем все
+                const res = pool[Math.floor(Math.random()*pool.length)];
+                
+                show(res[map.t], res[map.g], "Случайный выбор из твоего списка.");
+            } else {
+                // ИИ РЕЖИМ
+                if(API_KEY.includes('ВСТАВЬ') || API_KEY.length < 10) return alert('⛔ Вставь API ключ в код!');
+                
+                const btn = document.getElementById('mainBtn');
+                const oldTxt = btn.innerText;
+                btn.innerHTML = '<div class="loader"></div>';
+                
+                const sample = db.slice(0,10).map(m=>m[map.t]).join(', ');
+                const prompt = `Посоветуй фильм. Настроение: ${picks.mood||'любое'}. Жанр: ${picks.genre||'любой'}. Исключи эти: ${sample}. Ответ JSON: {"title":"Название","info":"Год/Жанр","reason":"Почему?"}`;
+                
+                try {
+                    const req = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+                    });
+                    if(!req.ok) throw new Error('Ошибка ' + req.status + ' (Нужен VPN?)');
+                    const ans = await req.json();
+                    if(!ans.candidates) throw new Error('ИИ не ответил.');
+                    
+                    const raw = ans.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+                    const json = JSON.parse(raw);
+                    show(json.title, json.info, json.reason);
+                } catch(e) {
+                    alert('Ошибка ИИ: ' + e.message);
+                } finally {
+                    btn.innerText = oldTxt;
                 }
-
-                const text = data.candidates[0].content.parts[0].text;
-                const jsonStr = text.replace(/```json|```/g, '').trim();
-                const result = JSON.parse(jsonStr);
-
-                showResult(result.title, result.info, result.reason);
-
-            } catch (error) {
-                alert("Ошибка ИИ: " + error.message);
-            } finally {
-                btn.innerText = originalText;
             }
         }
 
-        function showResult(title, info, reason) {
-            document.getElementById('resTitle').innerText = title;
-            document.getElementById('resInfo').innerText = info;
-            document.getElementById('resReason').innerText = reason;
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('resultPopup').style.display = 'block';
+        function show(t, i, r) {
+            document.getElementById('pTitle').innerText = t || "???";
+            document.getElementById('pInfo').innerText = i || "";
+            document.getElementById('pReason').innerText = r || "";
+            document.getElementById('ovl').style.display = 'block';
+            document.getElementById('popup').style.display = 'block';
         }
-
-        function closePopup() {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('resultPopup').style.display = 'none';
+        function closeP() {
+            document.getElementById('ovl').style.display = 'none';
+            document.getElementById('popup').style.display = 'none';
         }
     </script>
 </body>
