@@ -104,7 +104,7 @@
 
     <div class="header">
         <div class="logo">КИНО</div>
-        <div style="font-size: 0.7rem; color: var(--text-dim);" id="status">Загрузите файл</div>
+        <div style="font-size: 0.7rem; color: var(--text-dim);" id="status">Демо-режим</div>
     </div>
 
     <input type="file" id="fileInput" accept=".xlsx, .xls">
@@ -132,7 +132,8 @@
     </div>
 
     <div class="section-title">Жанр</div>
-    <div id="genreGrid" class="button-grid" data-group="genre"></div>
+    <div id="genreGrid" class="button-grid" data-group="genre">
+        </div>
 
     <div class="section-title">Настроение</div>
     <div class="button-grid" data-group="mood">
@@ -154,49 +155,85 @@
 
     <div class="overlay" id="overlay" onclick="closePopup()"></div>
     <div id="resultPopup">
-        <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Рекомендация</div>
-        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.6rem;"></h2>
+        <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Результат</div>
+        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.4rem;"></h2>
         <p id="resInfo" style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 25px;"></p>
-        <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold;">КЛАСС</button>
+        <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold;">ЗАКРЫТЬ</button>
     </div>
 
     <script>
+        // Демо-данные, чтобы работало сразу
+        const demoData = [
+            { "Название": "Побег из Шоушенка", "Жанр": "Драма", "Тип": "Фильм" },
+            { "Название": "Друзья", "Жанр": "Комедия", "Тип": "Сериал" },
+            { "Название": "Начало", "Жанр": "Фантастика", "Тип": "Фильм" },
+            { "Название": "Черное зеркало", "Жанр": "Фантастика", "Тип": "Сериал" }
+        ];
+
         let db = [];
         let choices = {};
 
+        // 1. Выбор кнопки (с возможностью отмены)
         function sel(btn, val) {
             const group = btn.parentElement.dataset.group;
             
-            // Если нажимаем на ту же кнопку - снимаем выделение
+            // Если кнопка уже активна — выключаем её
             if (btn.classList.contains('active')) {
                 btn.classList.remove('active');
                 delete choices[group];
                 return;
             }
 
-            // Иначе выделяем новую
+            // Иначе выключаем остальные в группе и включаем эту
             btn.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             choices[group] = val;
         }
 
+        // 2. Загрузка файла Excel
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const data = new Uint8Array(ev.target.result);
-                const wb = XLSX.read(data, {type: 'array'});
-                db = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                localStorage.setItem('kinoskill_db', JSON.stringify(db));
-                updateDynamicGrids();
-                document.getElementById('status').innerText = "База: " + db.length;
+                try {
+                    const data = new Uint8Array(ev.target.result);
+                    const wb = XLSX.read(data, {type: 'array'});
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+                    
+                    // Проверка колонок
+                    if (jsonData.length > 0) {
+                        const firstRow = jsonData[0];
+                        if (!firstRow.hasOwnProperty('Название') && !firstRow.hasOwnProperty('Жанр')) {
+                            alert("Ошибка! В файле нет колонок 'Название' или 'Жанр'. Проверьте заголовки.");
+                            return;
+                        }
+                    }
+
+                    db = jsonData;
+                    localStorage.setItem('kinoskill_db', JSON.stringify(db));
+                    updateDynamicGrids();
+                    document.getElementById('status').innerText = "✅ Загружено: " + db.length;
+                    alert("Успешно! Загружено фильмов: " + db.length);
+                } catch (err) {
+                    alert("Ошибка чтения файла: " + err.message);
+                }
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
+        // 3. Обновление кнопок жанров
         function updateDynamicGrids() {
-            const genres = [...new Set(db.map(i => i.Жанр))].filter(Boolean).sort();
+            // Если база пуста (или сломана), берем демо
+            const source = (db && db.length > 0) ? db : demoData;
+            
+            const genres = [...new Set(source.map(i => i.Жанр))].filter(Boolean).sort();
             const gGrid = document.getElementById('genreGrid');
             gGrid.innerHTML = '';
+            
+            if (genres.length === 0) {
+                 gGrid.innerHTML = '<div style="color:#666; font-size:0.8rem">Нет жанров в файле</div>';
+            }
+
             genres.forEach(item => {
                 const b = document.createElement('button');
                 b.className = 'option-btn';
@@ -206,28 +243,46 @@
             });
         }
 
+        // 4. Логика подбора
         function predict() {
-            if (db.length === 0) return alert("Сначала загрузите Excel файл!");
-            
-            // Фильтрация: ищем точное совпадение по Жанру и Типу (если они выбраны)
-            let filtered = db.filter(m => 
-                (!choices.genre || m.Жанр === choices.genre) &&
-                (!choices.type || m.Тип === choices.type)
-            );
+            // Используем демо-базу, если своя не загружена
+            const currentDB = (db && db.length > 0) ? db : demoData;
 
-            // Если ничего не нашли, пробуем искать только по Типу (фильм/сериал)
-            if (filtered.length === 0 && choices.type) {
-                filtered = db.filter(m => m.Тип === choices.type);
+            // Фильтрация
+            let filtered = currentDB.filter(m => {
+                // Если выбран Жанр, он должен совпадать
+                if (choices.genre && m.Жанр !== choices.genre) return false;
+                // Если выбран Тип, он должен совпадать
+                if (choices.type && m.Тип !== choices.type) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                // Если ничего не нашли, пробуем найти хотя бы по Типу
+                if (choices.type) {
+                     filtered = currentDB.filter(m => m.Тип === choices.type);
+                }
+                
+                // Если всё равно пусто
+                if (filtered.length === 0) {
+                    showResult("Упс!", "Ничего не найдено под такие фильтры. Попробуйте убрать часть условий.");
+                    return;
+                }
             }
 
-            // Выбираем случайный из найденных (или из всей базы, если совсем ничего нет)
-            const m = filtered.length > 0 
-                ? filtered[Math.floor(Math.random()*filtered.length)] 
-                : db[Math.floor(Math.random()*db.length)];
+            // Случайный выбор
+            const m = filtered[Math.floor(Math.random() * filtered.length)];
             
-            // Показываем результат
-            document.getElementById('resTitle').innerText = m.Название;
-            document.getElementById('resInfo').innerText = `${m.Жанр} • ${m.Тип || 'Кино'}`;
+            // Защита от пустых данных
+            const title = m.Название || "Без названия";
+            const info = `${m.Жанр || 'Жанр?'} • ${m.Тип || 'Тип?'}`;
+            
+            showResult(title, info);
+        }
+
+        function showResult(title, info) {
+            document.getElementById('resTitle').innerText = title;
+            document.getElementById('resInfo').innerText = info;
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('resultPopup').style.display = 'block';
         }
@@ -237,13 +292,19 @@
             document.getElementById('resultPopup').style.display = 'none';
         }
 
+        // 5. Старт
         window.onload = () => {
             const saved = localStorage.getItem('kinoskill_db');
             if (saved) {
-                db = JSON.parse(saved);
-                updateDynamicGrids();
-                document.getElementById('status').innerText = "База загружена";
+                try {
+                    db = JSON.parse(saved);
+                    document.getElementById('status').innerText = "✅ База: " + db.length;
+                } catch (e) {
+                    console.error("Ошибка кэша");
+                }
             }
+            // Всегда строим сетку (из базы или демо)
+            updateDynamicGrids();
         };
     </script>
 </body>
