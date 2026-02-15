@@ -107,13 +107,13 @@
         <div style="font-size: 0.7rem; color: var(--text-dim);" id="status">Загрузите файл</div>
     </div>
 
-    <input type="file" id="fileInput" accept=".xlsx, .xls">
+    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
 
     <div class="section-title">Тип</div>
     <div class="button-grid" data-group="type">
-        <button class="option-btn" onclick="sel(this, 'FILM')">🎬 Фильм</button>
-        <button class="option-btn" onclick="sel(this, 'TV_SERIES')">📺 Сериал</button>
-        <button class="option-btn" onclick="sel(this, 'MINI_SERIES')">🎞️ Мини</button>
+        <button class="option-btn" onclick="sel(this, ['FILM', 'Фильм'])">🎬 Фильм</button>
+        <button class="option-btn" onclick="sel(this, ['TV_SERIES', 'Сериал'])">📺 Сериал</button>
+        <button class="option-btn" onclick="sel(this, ['MINI_SERIES', 'Мини'])">🎞️ Мини</button>
     </div>
 
     <div class="section-title">Время дня</div>
@@ -131,9 +131,9 @@
         <button class="option-btn wide-btn" onclick="sel(this, 'Свободное время')">🎉 Свободное время</button>
     </div>
 
-    <div class="section-title">Жанр (из файла)</div>
+    <div class="section-title">Жанр</div>
     <div id="genreGrid" class="button-grid" data-group="genre">
-        <div style="color:#666; font-size:0.8rem; padding:10px;">Загрузите файл...</div>
+        <div style="font-size:0.8rem; opacity:0.5; padding:5px;">Жанры появятся после загрузки</div>
     </div>
 
     <div class="section-title">Настроение</div>
@@ -145,24 +145,18 @@
         <button class="option-btn" onclick="sel(this, 'Грустное')">😢 Грустное</button>
     </div>
 
-    <div class="section-title">Компания</div>
-    <div class="button-grid" data-group="company">
-        <button class="option-btn" onclick="sel(this, 'Один')">🧑 Один</button>
-        <button class="option-btn" onclick="sel(this, 'Вдвоём')">👫 Вдвоём</button>
-        <button class="option-btn" onclick="sel(this, 'Компания')">👥 Компания</button>
-    </div>
-
     <button class="main-predict-btn" onclick="predict()">ПОДОБРАТЬ</button>
 
     <div class="overlay" id="overlay" onclick="closePopup()"></div>
     <div id="resultPopup">
         <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase;">Результат</div>
-        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.3rem; line-height: 1.4;"></h2>
+        <h2 id="resTitle" style="margin: 0 0 10px 0; font-size: 1.5rem;"></h2>
         <p id="resInfo" style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 25px;"></p>
         <button onclick="closePopup()" style="width:100%; padding:16px; border-radius:18px; background:#fff; color:#000; border:none; font-weight:bold;">ЗАКРЫТЬ</button>
     </div>
 
     <script>
+        // Демонстрационные данные на случай, если файл не загружен
         const demoData = [
             { "Title": "Побег из Шоушенка", "Genre": "Драма", "Type": "FILM" },
             { "Title": "Друзья", "Genre": "Комедия", "Type": "TV_SERIES" }
@@ -170,79 +164,110 @@
 
         let db = [];
         let choices = {};
+        
+        // Карта для хранения найденных имен колонок
+        let colMap = { title: null, genre: null, type: null }; 
 
+        // Выбор кнопки
         function sel(btn, val) {
             const group = btn.parentElement.dataset.group;
+            
+            // Если кнопка уже активна — отключаем
             if (btn.classList.contains('active')) {
                 btn.classList.remove('active');
                 delete choices[group];
                 return;
             }
+
+            // Иначе включаем
             btn.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            choices[group] = val;
+            choices[group] = val; 
         }
 
+        // ОБРАБОТКА ФАЙЛА
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 try {
                     const data = new Uint8Array(ev.target.result);
                     const wb = XLSX.read(data, {type: 'array'});
-                    const sheet = wb.Sheets[wb.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet);
                     
-                    if (jsonData.length > 0) {
-                        const keys = Object.keys(jsonData[0]);
-                        alert("Найдены колонки: " + keys.join(", "));
+                    // 1. Ищем лист "Буду смотреть"
+                    let targetSheetName = wb.SheetNames.find(n => 
+                        n.toLowerCase().includes("буду") || 
+                        n.toLowerCase().includes("watch") ||
+                        n.toLowerCase().includes("план")
+                    );
+
+                    // Если не нашли "Буду смотреть", берем первый попавшийся (но предупредим, если это Дашборд)
+                    if (!targetSheetName) {
+                        targetSheetName = wb.SheetNames[0];
+                        alert("Лист 'Буду смотреть' не найден. Использую первый лист: " + targetSheetName);
+                    } else {
+                        // alert("Использую лист: " + targetSheetName);
                     }
+
+                    const sheet = wb.Sheets[targetSheetName];
+                    
+                    // 2. Читаем "сырые" данные, чтобы найти заголовок
+                    const rawData = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                    if (!rawData || rawData.length === 0) return alert("Лист пуст!");
+
+                    // 3. Сканируем строки, пока не найдем "Название"
+                    let headerRowIndex = 0;
+                    for (let i = 0; i < Math.min(rawData.length, 30); i++) {
+                        const rowStr = JSON.stringify(rawData[i]).toLowerCase();
+                        if (rowStr.includes("название") || rowStr.includes("title") || rowStr.includes("фильм")) {
+                            headerRowIndex = i;
+                            break;
+                        }
+                    }
+
+                    // 4. Парсим таблицу начиная с найденной строки
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, {range: headerRowIndex});
+                    
+                    if (jsonData.length === 0) return alert("Не удалось найти фильмы на листе " + targetSheetName);
+
+                    // 5. Определяем колонки
+                    const keys = Object.keys(jsonData[0]);
+                    colMap.title = keys.find(k => /название|title|name|фильм/i.test(k)) || keys[0];
+                    colMap.genre = keys.find(k => /жанр|genre/i.test(k));
+                    colMap.type = keys.find(k => /тип|type|category/i.test(k));
 
                     db = jsonData;
                     localStorage.setItem('kinoskill_db', JSON.stringify(db));
+                    localStorage.setItem('kinoskill_map', JSON.stringify(colMap));
+                    
                     updateDynamicGrids();
-                    document.getElementById('status').innerText = "✅ Файл: " + db.length;
+                    document.getElementById('status').innerText = `✅ Лист: ${targetSheetName} (${db.length})`;
+
                 } catch (err) {
-                    alert("Ошибка: " + err.message);
+                    alert("Ошибка чтения: " + err.message);
                 }
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
-        // Универсальная функция поиска значения
-        function safeGet(row, keys) {
-            for (let k of keys) {
-                // Ищем точное совпадение или совпадение без учета регистра
-                const foundKey = Object.keys(row).find(objKey => objKey.toLowerCase() === k.toLowerCase());
-                if (foundKey) return row[foundKey];
-            }
-            return null;
-        }
-
-        function getTitle(row) {
-            // Ищем колонку с названием
-            let val = safeGet(row, ['Название', 'Title', 'Name', 'Фильм', 'Movie', 'Russian Title']);
-            if (val) return val;
-            // Если не нашли - берем ПЕРВУЮ колонку
-            const keys = Object.keys(row);
-            if (keys.length > 0) return row[keys[0]];
-            return "Без названия";
-        }
-
-        function getGenre(row) {
-            return safeGet(row, ['Жанр', 'Genre', 'Genres']) || "Жанр?";
-        }
-
-        function getType(row) {
-            return safeGet(row, ['Тип', 'Type', 'Category']) || "";
-        }
-
         function updateDynamicGrids() {
             const source = (db && db.length > 0) ? db : demoData;
-            const genres = [...new Set(source.map(i => getGenre(i)))].filter(g => g && g !== "Жанр?").sort();
+            const gKey = colMap.genre || 'Genre';
             
+            // Собираем уникальные жанры
+            const genres = new Set();
+            source.forEach(row => {
+                if (row[gKey]) genres.add(row[gKey]);
+            });
+
+            const sortedGenres = [...genres].sort();
             const gGrid = document.getElementById('genreGrid');
             gGrid.innerHTML = '';
-            genres.forEach(item => {
+            
+            if (sortedGenres.length === 0) {
+                 gGrid.innerHTML = '<div style="color:#666; font-size:0.8rem">Жанры не найдены</div>';
+            }
+
+            sortedGenres.forEach(item => {
                 const b = document.createElement('button');
                 b.className = 'option-btn';
                 b.innerText = item;
@@ -253,33 +278,45 @@
 
         function predict() {
             const currentDB = (db && db.length > 0) ? db : demoData;
+            const tKey = colMap.title || 'Title';
+            const gKey = colMap.genre || 'Genre';
+            const typeKey = colMap.type || 'Type';
 
             let filtered = currentDB.filter(m => {
-                const g = getGenre(m);
-                const t = getType(m);
-                
-                if (choices.genre && g !== choices.genre) return false;
-                if (choices.type && t !== choices.type) return false;
+                const mGenre = m[gKey];
+                const mType = m[typeKey]; // FILM, TV_SERIES...
+
+                // 1. Фильтр по жанру
+                if (choices.genre && mGenre !== choices.genre) return false;
+
+                // 2. Фильтр по типу (FILM vs TV_SERIES)
+                if (choices.type && mType) {
+                    // choices.type — это массив ['FILM', 'Фильм']
+                    // Проверяем, есть ли одно из этих слов в ячейке Excel
+                    const match = choices.type.some(keyword => 
+                        mType.toString().toUpperCase().includes(keyword.toUpperCase())
+                    );
+                    if (!match) return false;
+                }
                 return true;
             });
 
+            // Если ничего не нашли, пробуем искать только по типу (игнорируя жанр)
             if (filtered.length === 0 && choices.type) {
-                filtered = currentDB.filter(m => getType(m) === choices.type);
-            }
-            if (filtered.length === 0) {
-                 // Если совсем пусто - случайный из всей базы
-                 filtered = currentDB;
+                filtered = currentDB.filter(m => {
+                    const mType = m[typeKey];
+                    return mType && choices.type.some(k => mType.toString().toUpperCase().includes(k.toUpperCase()));
+                });
             }
 
+            // Если совсем пусто — берем всю базу
+            if (filtered.length === 0) filtered = currentDB;
+
+            // Выбираем случайный
             const m = filtered[Math.floor(Math.random() * filtered.length)];
-            
-            // Определяем данные для вывода
-            const title = getTitle(m);
-            const genre = getGenre(m);
-            const type = getType(m);
 
-            document.getElementById('resTitle').innerText = title;
-            document.getElementById('resInfo').innerText = `${genre} • ${type}`;
+            document.getElementById('resTitle').innerText = m[tKey] || "Без названия";
+            document.getElementById('resInfo').innerText = `${m[gKey] || ''} • ${m[typeKey] || ''}`;
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('resultPopup').style.display = 'block';
         }
@@ -289,13 +326,19 @@
             document.getElementById('resultPopup').style.display = 'none';
         }
 
+        // При загрузке страницы восстанавливаем данные
         window.onload = () => {
-            const saved = localStorage.getItem('kinoskill_db');
-            if (saved) {
+            const savedDB = localStorage.getItem('kinoskill_db');
+            const savedMap = localStorage.getItem('kinoskill_map');
+            
+            if (savedDB) {
                 try {
-                    db = JSON.parse(saved);
-                    document.getElementById('status').innerText = "✅ Файл: " + db.length;
+                    db = JSON.parse(savedDB);
+                    document.getElementById('status').innerText = `✅ В памяти: ${db.length} фильмов`;
                 } catch(e) {}
+            }
+            if (savedMap) {
+                try { colMap = JSON.parse(savedMap); } catch(e) {}
             }
             updateDynamicGrids();
         };
