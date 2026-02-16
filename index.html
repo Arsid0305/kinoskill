@@ -3,37 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>КИНО Скилл DeepSeek</title>
+    <title>КИНО Скилл Gemini</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root { --bg: #0f1014; --card: #1e1e24; --btn: #2b2b30; --accent: #bb86fc; --ai: #03dac6; --text: #fff; --dim: #9aa0a6; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; padding-bottom: 160px; margin: 0; }
-        
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; }
-
         .switch { display: flex; background: #222; border-radius: 12px; padding: 4px; margin-bottom: 20px; border: 1px solid #333; }
         .sw-btn { flex: 1; padding: 12px; text-align: center; border-radius: 10px; font-weight: 600; color: #666; transition: 0.3s; cursor: pointer; }
         .sw-btn.active { color: #000; background: #fff; }
         .sw-btn.ai-active { background: var(--ai); color: #000; box-shadow: 0 0 15px rgba(3,218,198,0.3); }
-
         .title { font-size: 0.7rem; color: var(--dim); text-transform: uppercase; margin: 25px 0 10px 5px; font-weight: 600; letter-spacing: 1px; }
-        
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
         .btn { background: var(--btn); border: 1px solid transparent; color: var(--text); padding: 14px; border-radius: 16px; font-size: 0.85rem; text-align: center; min-height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .btn.active { border-color: #fff; background: #383840; color: #fff; }
-        .wide { grid-column: span 2; }
-
         .main-btn { position: fixed; bottom: 40px; left: 20px; right: 20px; background: #fff; color: #000; border: none; padding: 20px; border-radius: 24px; font-weight: 800; font-size: 1.1rem; z-index: 100; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-transform: uppercase; cursor: pointer; }
         .ai-btn { background: linear-gradient(135deg, #03dac6, #018786) !important; color: #000 !important; }
-
         input[type="file"] { margin-bottom: 15px; color: var(--dim); font-size: 0.8rem; width: 100%; }
-        
         #popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; background: var(--card); padding: 30px; border-radius: 30px; z-index: 1000; border: 1px solid #333; text-align: center; box-shadow: 0 50px 100px rgba(0,0,0,0.9); }
         .ovl { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; backdrop-filter: blur(5px); }
-        
         .loader { display: inline-block; width: 15px; height: 15px; border: 3px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 1s infinite; margin-right: 10px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -52,190 +43,119 @@
 
     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
 
-    <div class="title">Тип</div>
-    <div class="grid" data-g="type">
-        <button class="btn" onclick="sel(this, ['FILM', 'Фильм'])">🎬 Фильм</button>
-        <button class="btn" onclick="sel(this, ['TV_SERIES', 'Сериал'])">📺 Сериал</button>
-    </div>
-
-    <div class="title">Контекст</div>
-    <div class="grid" data-g="context">
-        <button class="btn" onclick="sel(this, 'Вечер')">🌆 Вечер</button>
-        <button class="btn" onclick="sel(this, 'Фон')">🎧 Фон</button>
-        <button class="btn wide" onclick="sel(this, 'Внимательно')">👀 Внимательно</button>
-    </div>
-
     <div class="title">Настроение</div>
     <div class="grid" data-g="mood">
         <button class="btn" onclick="sel(this, 'Весёлое')">😊 Весёлое</button>
         <button class="btn" onclick="sel(this, 'Задумчивое')">🤔 Думать</button>
-        <button class="btn" onclick="sel(this, 'Азарт')">🔥 Азарт</button>
         <button class="btn" onclick="sel(this, 'Спокойное')">😌 Релакс</button>
-        <button class="btn" onclick="sel(this, 'Грустное')">😢 Грусть</button>
-    </div>
-
-    <div class="title">Компания</div>
-    <div class="grid" data-g="company">
-        <button class="btn" onclick="sel(this, 'Один')">🧑 Один</button>
-        <button class="btn" onclick="sel(this, 'Вдвоём')">👫 Вдвоём</button>
-        <button class="btn" onclick="sel(this, 'Компания')">👥 Друзья</button>
     </div>
 
     <div class="title">Жанр (из файла)</div>
     <div id="genreGrid" class="grid" data-g="genre">
-        <div style="font-size:0.8rem; opacity:0.5; padding:10px; grid-column: span 3;">Жанры появятся после загрузки</div>
+        <div style="font-size:0.8rem; opacity:0.5; padding:10px;">Загрузите файл...</div>
     </div>
 
     <button id="mainBtn" class="main-btn" onclick="go()">ПОДОБРАТЬ</button>
 
     <div class="ovl" id="overlay" onclick="closePopup()"></div>
     <div id="popup">
-        <div style="font-size:0.7rem; color:var(--accent); margin-bottom:10px; text-transform:uppercase;">РЕЗУЛЬТАТ</div>
-        <h2 id="resTitle" style="margin:0 0 10px; font-size:1.5rem; line-height:1.2;"></h2>
+        <h2 id="resTitle" style="margin:0 0 10px; font-size:1.5rem;"></h2>
         <p id="resInfo" style="color:var(--dim); font-size:0.9rem; margin-bottom:20px;"></p>
-        <div id="resReason" style="font-size:0.9rem; background:#2b2b30; padding:15px; border-radius:15px; color:#ddd; text-align:left;"></div>
-        <button onclick="closePopup()" style="width:100%; padding:15px; margin-top:20px; border-radius:15px; background:#fff; border:none; font-weight:bold; cursor:pointer;">ЗАКРЫТЬ</button>
+        <div id="resReason" style="background:#2b2b30; padding:15px; border-radius:15px; font-size:0.9rem; color:#ddd; text-align:left;"></div>
+        <button onclick="closePopup()" style="width:100%; padding:15px; margin-top:20px; border-radius:15px; background:#fff; border:none; font-weight:bold;">КРУТО</button>
     </div>
 
     <script>
         // ================================================
-        // ✅ ВСТАВЬ API-КЛЮЧ DEEPSEEK НИЖЕ
-        const API_KEY = "sk-2b68062a5a8d4ae1bad063ddaced8f7a"; 
+        // ✅ ВСТАВЬ API-КЛЮЧ GEMINI НИЖЕ (В КАВЫЧКИ)
+        const API_KEY = "AIzaSyCZJQzvupMbbOWLwltXkPvA2EHMKUd9jao"; 
         // ================================================
 
         let mode = 'local';
         let db = [];
         let picks = {};
-        let cols = { t: null, g: null, type: null };
+        let cols = { t: null, g: null };
 
         function setMode(m) {
             mode = m;
             document.getElementById('btnLocal').className = `sw-btn ${m==='local'?'active':''}`;
             document.getElementById('btnAI').className = `sw-btn ${m==='ai'?'ai-active':''}`;
-            const btn = document.getElementById('mainBtn');
-            if(m==='ai') { btn.innerText = "✨ СПРОСИТЬ DEEPSEEK"; btn.classList.add('ai-btn'); }
-            else { btn.innerText = "ПОДОБРАТЬ"; btn.classList.remove('ai-btn'); }
+            document.getElementById('mainBtn').innerText = (m === 'ai') ? "✨ СПРОСИТЬ ГЕМИНИ" : "ПОДОБРАТЬ";
         }
 
         function sel(el, val) {
             const grp = el.parentElement.dataset.g;
-            if(el.classList.contains('active')) {
-                el.classList.remove('active'); delete picks[grp];
-            } else {
-                el.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-                el.classList.add('active'); picks[grp] = val;
-            }
+            el.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active'); picks[grp] = val;
         }
 
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const r = new FileReader();
             r.onload = (ev) => {
-                try {
-                    const d = new Uint8Array(ev.target.result);
-                    const wb = XLSX.read(d, {type:'array'});
-                    const sName = wb.SheetNames.find(n=>/буду|watch|план|каталог/i.test(n)) || wb.SheetNames[0];
-                    const sheet = wb.Sheets[sName];
-                    const raw = XLSX.utils.sheet_to_json(sheet, {header:1});
-                    let skip = 0;
-                    for(let i=0; i<Math.min(raw.length,30); i++) {
-                        const rowStr = JSON.stringify(raw[i]).toLowerCase();
-                        if(rowStr.includes('название') || rowStr.includes('title')) { skip=i; break; }
-                    }
-                    const json = XLSX.utils.sheet_to_json(sheet, {range:skip});
-                    if(!json.length) return alert('Файл пуст');
-                    
-                    const k = Object.keys(json[0]);
-                    cols.t = k.find(x=>/название|title/i.test(x)) || k[0];
-                    cols.g = k.find(x=>/жанр|genre/i.test(x));
-                    cols.type = k.find(x=>/тип|type/i.test(x));
-                    
-                    db = json;
-                    drawGenres();
-                    document.getElementById('status').innerText = `✅ Файл загружен (${db.length})`;
-                } catch(e) { alert('Ошибка: '+e.message); }
+                const d = new Uint8Array(ev.target.result);
+                const wb = XLSX.read(d, {type:'array'});
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                const k = Object.keys(json[0]);
+                cols.t = k.find(x=>/название|title/i.test(x)) || k[0];
+                cols.g = k.find(x=>/жанр|genre/i.test(x));
+                db = json;
+                document.getElementById('status').innerText = `✅ Загружено: ${db.length}`;
+                if(cols.g) {
+                    const set = new Set();
+                    db.forEach(r => { if(r[cols.g]) r[cols.g].split(',').forEach(s=>set.add(s.trim())); });
+                    const box = document.getElementById('genreGrid');
+                    box.innerHTML = '';
+                    [...set].sort().slice(0,12).forEach(g => {
+                        const b = document.createElement('button');
+                        b.className = 'btn'; b.innerText = g;
+                        b.onclick = () => sel(b, g); box.appendChild(b);
+                    });
+                }
             };
             r.readAsArrayBuffer(e.target.files[0]);
         });
 
-        function drawGenres() {
-            if(!cols.g) return;
-            const set = new Set();
-            db.forEach(r => {
-                if(r[cols.g]) r[cols.g].toString().split(/,|;|\//).forEach(s => set.add(s.trim()));
-            });
-            const box = document.getElementById('genreGrid');
-            box.innerHTML = '';
-            [...set].sort().forEach(g => {
-                const b = document.createElement('button');
-                b.className = 'btn'; b.innerText = g;
-                b.onclick = () => sel(b, g); box.appendChild(b);
-            });
-        }
-
         async function go() {
-            try {
-                if(mode === 'local') runLocal();
-                else await runAI();
-            } catch(e) { alert(e.message); }
-        }
+            if(mode === 'local') {
+                const m = db[Math.floor(Math.random()*db.length)];
+                show(m[cols.t], m[cols.g], "Случайный выбор.");
+            } else {
+                if(API_KEY.includes('ВСТАВЬ')) return alert('Вставь ключ!');
+                const btn = document.getElementById('mainBtn');
+                btn.innerHTML = '<div class="loader"></div> ДУМАЮ...';
+                
+                const prompt = `Посоветуй 1 фильм. Настроение: ${picks.mood || 'любое'}. Жанр: ${picks.genre || 'любой'}. Ответ JSON: {"title":"Название","info":"Год, Жанр","reason":"Почему"}`;
 
-        function runLocal() {
-            if(!db.length) return alert('Загрузите Excel файл!');
-            let pool = db.filter(m => {
-                if(picks.type && m[cols.type]) {
-                    if(!picks.type.some(t => m[cols.type].toUpperCase().includes(t.toUpperCase()))) return false;
+                try {
+                    // 👇 ВОТ ТУТ КЛЮЧ ПЕРЕДАЕТСЯ ПРАВИЛЬНО
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.error) throw new Error(data.error.message);
+
+                    const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    const res = JSON.parse(raw);
+                    show(res.title, res.info, res.reason);
+                } catch (e) {
+                    alert("Ошибка: " + e.message);
+                } finally {
+                    btn.innerText = "✨ СПРОСИТЬ ГЕМИНИ";
                 }
-                if(picks.genre && m[cols.g]) {
-                    if(!m[cols.g].toLowerCase().includes(picks.genre.toLowerCase())) return false;
-                }
-                return true;
-            });
-            if(!pool.length) pool = db;
-            const m = pool[Math.floor(Math.random()*pool.length)];
-            show(m[cols.t], m[cols.g], picks.mood ? `Под настроение: ${picks.mood}` : "Случайный выбор из списка.");
-        }
-
-        async function runAI() {
-            if(API_KEY.includes('ВСТАВЬ')) return alert('Нужно вставить API-ключ DeepSeek в код!');
-            
-            const btn = document.getElementById('mainBtn');
-            const old = btn.innerText;
-            btn.innerHTML = '<div class="loader"></div> DEEPSEEK ДУМАЕТ...';
-            
-            const seen = db.sort(()=>0.5-Math.random()).slice(0,12).map(m=>m[cols.t]).join(', ');
-            
-            const prompt = `Ты — кино-эксперт. Посоветуй 1 фильм/сериал. 
-            Настроение: ${picks.mood || 'любое'}. Компания: ${picks.company || 'любая'}. 
-            Контекст: ${picks.context || 'обычный'}. Тип: ${picks.type ? picks.type[1] : 'любой'}. 
-            Жанр: ${picks.genre || 'любой'}. Исключи: ${seen}. 
-            Верни ответ ТОЛЬКО в формате JSON: {"title":"Название","info":"Год, Жанр","reason":"Почему подходит"}`;
-
-            try {
-                const req = await fetch("https://api.deepseek.com/v1/chat/completions", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
-                    body: JSON.stringify({
-                        model: "deepseek-chat",
-                        messages: [{role: "user", content: prompt}],
-                        response_format: { type: 'json_object' }
-                    })
-                });
-
-                if(!req.ok) throw new Error(`Ошибка API: ${req.status}`);
-                const ans = await req.json();
-                const json = JSON.parse(ans.choices[0].message.content);
-                show(json.title, json.info, json.reason);
-            } catch(e) {
-                alert("Ошибка ИИ: " + e.message);
-            } finally {
-                btn.innerText = old;
             }
         }
 
         function show(t, i, r) {
-            document.getElementById('resTitle').innerText = t||"";
-            document.getElementById('resInfo').innerText = i||"";
-            document.getElementById('resReason').innerText = r||"";
+            document.getElementById('resTitle').innerText = t;
+            document.getElementById('resInfo').innerText = i;
+            document.getElementById('resReason').innerText = r;
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('popup').style.display = 'block';
         }
