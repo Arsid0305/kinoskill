@@ -10,6 +10,8 @@
     <meta name="theme-color" content="#0f1014">
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         :root {
             --bg: #0f1014;
@@ -17,9 +19,10 @@
             --btn-bg: #2b2b30;
             --text-main: #ffffff;
             --text-dim: #888888;
-            --accent-yellow: #fca311; /* Цвет как на скриншоте Lovable */
-            --accent-teal: #2dd4bf;   /* Цвет для AI */
+            --accent-yellow: #fca311;
+            --accent-teal: #2dd4bf;
             --danger: #ff4d4d;
+            --success: #4cd964;
         }
 
         body {
@@ -28,7 +31,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 20px;
-            padding-bottom: 140px; /* Место под большую кнопку */
+            padding-bottom: 140px;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
         }
@@ -41,10 +44,10 @@
             margin-bottom: 20px;
             padding-top: 10px;
         }
-        .logo { font-size: 1.8rem; font-weight: 800; letter-spacing: 0.5px; }
+        .logo { font-size: 1.8rem; font-weight: 800; letter-spacing: 0.5px; transition: color 0.5s; cursor: pointer; }
         .file-status { font-size: 0.75rem; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
         .dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: inline-block; }
-        .dot.ready { background: #4cd964; }
+        .dot.ready { background: var(--success); }
 
         /* Переключатель режимов */
         .mode-switch {
@@ -70,7 +73,6 @@
             justify-content: center;
             gap: 8px;
         }
-        /* Активные состояния */
         .mode-option.active-local { background: var(--btn-bg); color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
         .mode-option.active-ai { background: rgba(45, 212, 191, 0.15); color: var(--accent-teal); border: 1px solid var(--accent-teal); }
 
@@ -92,7 +94,6 @@
         }
         .grid-scroll::-webkit-scrollbar { display: none; }
 
-        /* Кнопки фильтров */
         .filter-btn {
             background: var(--btn-bg);
             color: var(--text-main);
@@ -112,11 +113,9 @@
         }
         .filter-btn:active { transform: scale(0.96); }
         .filter-btn.selected { background: #3a3a40; border-color: #fff; }
-
-        /* Специальные стили для Настроения (как на скрине) */
         .mood-btn { justify-content: flex-start; padding-left: 15px; }
 
-        /* Загрузка файла (скрытая область) */
+        /* Загрузка файла */
         .file-drop-area {
             border: 2px dashed #333;
             border-radius: 16px;
@@ -149,12 +148,10 @@
             z-index: 100;
             color: #000;
         }
-        
-        /* Цвета кнопки в зависимости от режима */
         .btn-theme-local { background: var(--accent-yellow); box-shadow: 0 10px 30px rgba(252, 163, 17, 0.3); }
         .btn-theme-ai { background: var(--accent-teal); box-shadow: 0 10px 30px rgba(45, 212, 191, 0.3); }
 
-        /* Модальное окно результата */
+        /* Модальное окно */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
@@ -175,34 +172,18 @@
         .modal.active { bottom: 0; }
         .modal-overlay.active { opacity: 1; pointer-events: all; }
 
-        .res-tag { 
-            display: inline-block; padding: 4px 10px; border-radius: 8px; 
-            background: #333; font-size: 0.7rem; color: #aaa; margin-bottom: 10px; 
-        }
+        .res-tag { display: inline-block; padding: 4px 10px; border-radius: 8px; background: #333; font-size: 0.7rem; color: #aaa; margin-bottom: 10px; }
         .res-title { font-size: 1.8rem; font-weight: 800; margin: 0 0 10px 0; line-height: 1.1; }
         .res-info { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 20px; }
-        .res-reason { 
-            background: #2c2c2e; padding: 20px; border-radius: 20px; 
-            font-size: 0.95rem; line-height: 1.5; color: #ddd; 
-            margin-bottom: 25px; border: 1px solid #3a3a3c;
-        }
+        .res-reason { background: #2c2c2e; padding: 20px; border-radius: 20px; font-size: 0.95rem; line-height: 1.5; color: #ddd; margin-bottom: 25px; border: 1px solid #3a3a3c; }
 
         /* Рейтинг */
         .rating-area { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
-        .rate-btn { background: #333; border: none; font-size: 1.5rem; padding: 10px; border-radius: 12px; cursor: pointer; }
-        .rate-btn.active { background: #fff; }
+        .rate-btn { background: #333; border: none; font-size: 1.5rem; padding: 10px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .rate-btn.active { background: #fff; transform: scale(1.1); }
 
-        .close-btn {
-            width: 100%; background: #fff; color: #000; border: none;
-            padding: 16px; border-radius: 16px; font-weight: 700; font-size: 1rem;
-        }
-
-        /* Спиннер */
-        .loader {
-            width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1);
-            border-top-color: #000; border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
+        .close-btn { width: 100%; background: #fff; color: #000; border: none; padding: 16px; border-radius: 16px; font-weight: 700; font-size: 1rem; }
+        .loader { width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
     </style>
@@ -210,7 +191,7 @@
 <body>
 
     <div class="header">
-        <div class="logo">КИНО 🍿</div>
+        <div class="logo" onclick="showDebugHistory()">КИНО 🍿</div>
         <div class="file-status">
             <span class="dot" id="statusDot"></span>
             <span id="statusText">Нет файла</span>
@@ -292,12 +273,12 @@
             ИИ анализирует ваши предпочтения...
         </div>
         
-        <div style="text-align:center; margin-bottom:10px; font-size:0.8rem; color:#666;">ОЦЕНИТЬ ВЫБОР (ДЛЯ ИСТОРИИ)</div>
+        <div style="text-align:center; margin-bottom:10px; font-size:0.8rem; color:#666;">СОХРАНИТЬ В ИСТОРИЮ (SUPABASE)</div>
         <div class="rating-area">
-            <button class="rate-btn" onclick="rate(this)">👎</button>
-            <button class="rate-btn" onclick="rate(this)">😐</button>
-            <button class="rate-btn" onclick="rate(this)">👍</button>
-            <button class="rate-btn" onclick="rate(this)">🔥</button>
+            <button class="rate-btn" data-rate="dislike" onclick="rate(this)">👎</button>
+            <button class="rate-btn" data-rate="neutral" onclick="rate(this)">😐</button>
+            <button class="rate-btn" data-rate="like" onclick="rate(this)">👍</button>
+            <button class="rate-btn" data-rate="super" onclick="rate(this)">🔥</button>
         </div>
 
         <button class="close-btn" onclick="closeModal()">ЗАКРЫТЬ</button>
@@ -305,24 +286,74 @@
 
     <script>
         // ==========================================
-        // 🔑 НАСТРОЙКИ DEEPSEEK
+        // 🚨 НАСТРОЙКИ (ВСТАВЬ СВОИ ДАННЫЕ СЮДА)
         // ==========================================
-        const part1 = "sk-2b68062a5a8d"; 
-        const part2 = "4ae1bad063ddaced8f7a"; // <--- ВСТАВЬ КЛЮЧ
-        const API_KEY = part1 + part2;
+        
+        // 1. DEEPSEEK KEY
+        const ds_part1 = "sk-2b68062a5a8d"; 
+        const ds_part2 = "4ae1bad063ddaced8f7a";
+        const DEEPSEEK_KEY = ds_part1 + ds_part2;
+
+        // 2. SUPABASE URL (Project URL)
+        const SUPABASE_URL = "https://evwuyatvrsxsqfdwufnk.supabase.co"; 
+        
+        // 3. SUPABASE KEY (Anon Public)
+        const SUPABASE_KEY = "sb_publishable_Y2P06hbswDxhbaRJNxMVKg_IMTvcg6h";
+        
         // ==========================================
 
-        let currentMode = 'local'; // 'local' or 'ai'
-        let db = []; // База фильмов
+        // Инициализация Supabase
+        let supabase = null;
+        try {
+            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch(e) {
+            console.error("Supabase не настроен (вставь ключи)");
+        }
+
+        let currentMode = 'local';
+        let db = [];
         let filters = {};
+        let currentSuggestion = null;
+        let userHistory = {}; // История из облака
+        
+        // ID Пользователя (хранится в телефоне, чтобы отличать тебя от других)
+        let userId = localStorage.getItem('kino_user_id');
+        if (!userId) {
+            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('kino_user_id', userId);
+        }
 
-        // 1. Управление режимом
+        // --- ЗАГРУЗКА ИСТОРИИ ИЗ SUPABASE ---
+        async function loadHistory() {
+            if (!supabase) return;
+            
+            // Запрашиваем таблицу ratings
+            const { data, error } = await supabase
+                .from('ratings')
+                .select('*')
+                .eq('user_id', userId);
+
+            if (data) {
+                userHistory = {};
+                data.forEach(item => {
+                    userHistory[item.movie] = item.score;
+                });
+                console.log("Загружена история:", userHistory);
+                // Индикатор успеха: логотип станет зеленым
+                document.querySelector('.logo').style.color = "#4cd964"; 
+            }
+        }
+        
+        // Загружаем сразу
+        loadHistory();
+
+
+        // --- UI ЛОГИКА ---
         function setMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-option').forEach(el => {
                 el.classList.remove('active-local', 'active-ai');
             });
-
             const btn = document.getElementById('mainBtn');
             if (mode === 'local') {
                 document.getElementById('modeLocal').classList.add('active-local');
@@ -335,61 +366,47 @@
             }
         }
 
-        // 2. Выбор фильтров
         function toggle(btn, val) {
             const group = btn.parentElement.dataset.group;
-            
-            // Если кнопка уже активна - снимаем выбор
             if (btn.classList.contains('selected')) {
                 btn.classList.remove('selected');
                 delete filters[group];
                 return;
             }
-
-            // Снимаем выбор с других кнопок в этой группе (радио-поведение)
             btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('selected'));
-            
-            // Выбираем новую
             btn.classList.add('selected');
             filters[group] = val;
         }
 
-        // 3. Загрузка файла
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                    
-                    if (jsonData.length > 0) {
-                        db = jsonData;
+                    db = XLSX.utils.sheet_to_json(firstSheet);
+                    if (db.length > 0) {
                         document.getElementById('statusDot').classList.add('ready');
-                        document.getElementById('statusText').innerText = `Загружено: ${db.length}`;
+                        document.getElementById('statusText').innerText = `Файлов: ${db.length}`;
                     }
-                } catch (err) {
-                    alert("Ошибка чтения Excel. Убедитесь, что это .xlsx или .csv");
-                }
+                } catch (err) { alert("Ошибка чтения Excel."); }
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // 4. Логика запуска
         async function run() {
-            if (db.length === 0 && currentMode === 'local') {
-                return alert("Сначала загрузите файл с фильмами!");
-            }
-
-            // Открываем модалку с загрузкой
+            if (db.length === 0 && currentMode === 'local') return alert("Сначала загрузите файл!");
+            
             const modal = document.getElementById('modal');
             const overlay = document.getElementById('overlay');
             const btn = document.getElementById('mainBtn');
             const originalBtnText = btn.innerHTML;
+            
+            document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
+            currentSuggestion = null; 
 
             btn.innerHTML = '<div class="loader"></div>';
 
@@ -397,16 +414,11 @@
                 if (currentMode === 'local') {
                     runLocalLogic();
                 } else {
-                    if (API_KEY.length < 10 || API_KEY.includes("ВСТАВЬ")) {
-                        throw new Error("Не введен ключ DeepSeek в код!");
-                    }
+                    if (DEEPSEEK_KEY.includes("ВСТАВЬ")) throw new Error("Ключ DeepSeek не вставлен!");
                     await runDeepSeekLogic();
                 }
-                
-                // Показываем результат
                 overlay.classList.add('active');
                 modal.classList.add('active');
-
             } catch (error) {
                 alert(error.message);
             } finally {
@@ -414,90 +426,69 @@
             }
         }
 
-        // 5. Логика "Мои фильмы" (Случайный выбор по фильтрам)
         function runLocalLogic() {
             let filtered = db.filter(movie => {
-                // Простая фильтрация: если в названии колонки есть "Жанр", проверяем совпадение
-                // Здесь упрощенная логика, ищет совпадение подстроки во всех значениях строки
                 const rowStr = JSON.stringify(movie).toLowerCase();
-                
                 if (filters.genre && !rowStr.includes(filters.genre.toLowerCase())) return false;
                 if (filters.type && !rowStr.includes(filters.type.toLowerCase())) return false;
-                
                 return true;
             });
-
-            if (filtered.length === 0) filtered = db; // Если ничего не найдено, берем всё
-
-            const randomMovie = filtered[Math.floor(Math.random() * filtered.length)];
+            if (filtered.length === 0) filtered = db;
             
-            // Пытаемся найти нужные поля
+            const randomMovie = filtered[Math.floor(Math.random() * filtered.length)];
             const keys = Object.keys(randomMovie);
             const titleKey = keys.find(k => k.match(/название|title|name/i)) || keys[0];
-            const infoKey = keys.find(k => k.match(/год|year|жанр|genre/i)) || keys[1];
+            
+            currentSuggestion = randomMovie[titleKey];
 
             displayResult(
                 "ЛОКАЛЬНЫЙ ПОДБОР",
-                randomMovie[titleKey] || "Без названия",
-                randomMovie[infoKey] || "Из вашего списка",
-                "Этот фильм подходит под выбранные фильтры из вашего файла."
+                currentSuggestion,
+                "Из списка",
+                "Случайный выбор по вашим фильтрам."
             );
         }
 
-        // 6. Логика AI (DeepSeek)
         async function runDeepSeekLogic() {
-            // Формируем промпт из фильтров
             const filterText = Object.entries(filters).map(([k, v]) => `${k}: ${v}`).join(", ") || "на твой вкус";
             
-            // Берем 10 случайных фильмов из базы для контекста вкуса
-            const sample = db
-                .sort(() => 0.5 - Math.random())
-                .slice(0, 15)
-                .map(m => Object.values(m).join(" "))
-                .join("; ");
+            // Фильтруем историю для промпта
+            const likes = Object.keys(userHistory).filter(k => userHistory[k] === 'like').join(", ");
+            const dislikes = Object.keys(userHistory).filter(k => userHistory[k] === 'dislike').join(", ");
+            
+            let memoryContext = "";
+            if (likes) memoryContext += `Ранее мне ОЧЕНЬ понравились: [${likes}]. Предлагай похожее по вайбу. `;
+            if (dislikes) memoryContext += `Мне НЕ понравились: [${dislikes}]. Избегай такого. `;
+
+            const sample = db.sort(() => 0.5 - Math.random()).slice(0, 10).map(m => Object.values(m)[0]).join(", ");
 
             const prompt = `
-                Ты кинокритик и аналитик. У меня есть список просмотренного: [${sample}].
-                
-                Сейчас я хочу посмотреть что-то новое.
-                Мои условия: ${filterText}.
-                
-                Предложи 1 идеальный фильм (которого нет в моем списке), основываясь на моих вкусах и текущих условиях.
-                
-                Ответ верни СТРОГО В JSON формате:
-                {
-                    "title": "Название на русском (Оригинал)",
-                    "info": "Год, Жанр, Рейтинг",
-                    "reason": "Коротко и ёмко объясни, почему именно этот фильм подходит под настроение '${filters.mood || 'обычное'}' и состояние '${filters.state || 'обычное'}'. Обращайся ко мне на 'ты'."
-                }
+                Ты эксперт. Я ищу фильм.
+                Мои условия сейчас: ${filterText}.
+                МОЯ ИСТОРИЯ (УЧИТЫВАЙ ЭТО ОБЯЗАТЕЛЬНО): ${memoryContext}
+                Что я уже видел: [${sample}].
+                Предложи 1 фильм. Верни JSON:
+                { "title": "Название", "info": "Год, Жанр", "reason": "Почему это подходит мне." }
             `;
 
             const response = await fetch("https://api.deepseek.com/chat/completions", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${API_KEY}`
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_KEY}` },
                 body: JSON.stringify({
                     model: "deepseek-chat",
                     messages: [
-                        { role: "system", content: "You are a helpful JSON movie recommender." },
+                        { role: "system", content: "You are a movie recommender. Output strictly JSON." },
                         { role: "user", content: prompt }
                     ],
-                    response_format: { type: "json_object" },
-                    temperature: 1.0
+                    response_format: { type: "json_object" }
                 })
             });
 
-            if (!response.ok) {
-                const err = await response.json();
-                if (response.status === 402) throw new Error("Закончились деньги на DeepSeek ($0.5 хватит надолго)");
-                throw new Error("Ошибка API: " + (err.error?.message || response.status));
-            }
-
+            if (!response.ok) throw new Error("Ошибка API DeepSeek. Проверь баланс.");
             const data = await response.json();
             const content = JSON.parse(data.choices[0].message.content);
-
+            
+            currentSuggestion = content.title;
             displayResult("AI ПРОГНОЗ", content.title, content.info, content.reason);
         }
 
@@ -506,9 +497,6 @@
             document.getElementById('resTitle').innerText = title;
             document.getElementById('resInfo').innerText = info;
             document.getElementById('resReason').innerText = reason;
-            
-            // Сброс оценок
-            document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
         }
 
         function closeModal() {
@@ -516,12 +504,49 @@
             document.getElementById('modal').classList.remove('active');
         }
 
-        function rate(btn) {
+        // --- ФУНКЦИЯ ОЦЕНКИ И ОТПРАВКИ В SUPABASE ---
+        async function rate(btn) {
             document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            // Здесь можно было бы сохранять оценку в localStorage, но для Excel нужен бэкенд
-        }
+            
+            if (!currentSuggestion) return;
 
+            const ratingType = btn.getAttribute('data-rate');
+            let scoreValue = 'neutral';
+            if (ratingType === 'like' || ratingType === 'super') scoreValue = 'like';
+            if (ratingType === 'dislike') scoreValue = 'dislike';
+            
+            // 1. Обновляем локально (чтобы работало без интернета/задержек в текущей сессии)
+            userHistory[currentSuggestion] = scoreValue;
+
+            // 2. Отправляем в Supabase
+            if (supabase) {
+                const { error } = await supabase
+                    .from('ratings')
+                    .insert([
+                        { user_id: userId, movie: currentSuggestion, score: scoreValue }
+                    ]);
+
+                if (error) {
+                    console.error("Ошибка Supabase:", error);
+                } else {
+                    console.log("Оценка сохранена в облаке!");
+                }
+            }
+        }
+        
+        // СЕКРЕТ (Кликни 5 раз по логотипу)
+        let debugClicks = 0;
+        function showDebugHistory() {
+            debugClicks++;
+            if (debugClicks === 5) {
+                const text = Object.entries(userHistory)
+                    .map(([film, rate]) => `${film}: ${rate === 'like' ? '❤️' : '👎'}`)
+                    .join('\n');
+                alert(`Ваш Cloud ID: ${userId}\nЗаписей: ${Object.keys(userHistory).length}\n\n${text}`);
+                debugClicks = 0;
+            }
+        }
     </script>
 </body>
 </html>
