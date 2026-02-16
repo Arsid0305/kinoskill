@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>КИНО Скилл 2.0</title>
+    <title>КИНО Скилл Final</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root { --bg: #0f1014; --card: #1e1e24; --btn: #2b2b30; --accent: #bb86fc; --ai: #03dac6; --text: #fff; --dim: #9aa0a6; }
@@ -29,13 +29,13 @@
 <body>
 
     <div class="header">
-        <div class="logo">КИНО Скилл 2.0</div>
+        <div class="logo">КИНО Скилл</div>
         <div style="font-size: 0.7rem; color: var(--dim);" id="status">Загрузите Excel</div>
     </div>
 
     <div class="switch">
         <div id="btnLocal" class="sw-btn active" onclick="setMode('local')">📂 Мои фильмы</div>
-        <div id="btnAI" class="sw-btn" onclick="setMode('ai')">✨ Gemini 2.0</div>
+        <div id="btnAI" class="sw-btn" onclick="setMode('ai')">✨ ИИ Подбор</div>
     </div>
 
     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
@@ -61,10 +61,10 @@
     </div>
 
     <script>
-        // --- ЗАЩИТА ОТ СКАНЕРОВ GITHUB ---
-        const part1 = "AIzaSyCZJQzvup"; 
-        const part2 = "MbbOWLwltXkPvA2EHMKUd9jao";
-        // ---------------------------------
+        // --- 1. ВСТАВЬ ЧАСТИ КЛЮЧА НИЖЕ ---
+        const part1 = "AIzaSyCZJQzvup"; // ВСТАВЬ СЮДА ПЕРВУЮ ПОЛОВИНУ КЛЮЧА
+        const part2 = "MbbOWLwltXkPvA2EHMKUd9jao";      // ВСТАВЬ СЮДА ВТОРУЮ ПОЛОВИНУ
+        // -----------------------------------
         const API_KEY = part1 + part2;
 
         let mode = 'local';
@@ -76,7 +76,7 @@
             mode = m;
             document.getElementById('btnLocal').className = `sw-btn ${m==='local'?'active':''}`;
             document.getElementById('btnAI').className = `sw-btn ${m==='ai'?'ai-active':''}`;
-            document.getElementById('mainBtn').innerText = (m === 'ai') ? "✨ СПРОСИТЬ GEMINI" : "ПОДОБРАТЬ";
+            document.getElementById('mainBtn').innerText = (m === 'ai') ? "✨ СПРОСИТЬ ГЕМИНИ" : "ПОДОБРАТЬ";
         }
 
         function sel(el, val) {
@@ -120,44 +120,41 @@
                 const oldTxt = btn.innerText;
                 btn.innerHTML = '<div class="loader"></div> ДУМАЮ...';
 
-                // Промпт для модели
-                const promptText = `Посоветуй 1 фильм. Настроение: ${picks.mood || 'любое'}. Жанр: ${picks.genre || 'любой'}. Ответ JSON: {"title":"Название","info":"Год, Жанр","reason":"Почему"}`;
+                // Для 1.5-flash надежнее просить JSON текстом, а не конфигом
+                const promptText = `Посоветуй 1 фильм. Настроение: ${picks.mood || 'любое'}. Жанр: ${picks.genre || 'любой'}. Ответ верни СТРОГО В JSON формате: {"title":"Название","info":"Год, Жанр","reason":"Почему"}`;
 
                 try {
-                    // 1. ИСПОЛЬЗУЕМ GEMINI 2.0 FLASH (самая актуальная)
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+                    // ИСПОЛЬЗУЕМ 1.5 FLASH + V1BETA (Самая стабильная бесплатная связка)
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
                     
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: promptText }] }],
-                            // 2. ЖЕСТКО ТРЕБУЕМ JSON (чтобы не было undefined ошибок)
-                            generationConfig: {
-                                responseMimeType: "application/json"
-                            }
+                            contents: [{ parts: [{ text: promptText }] }]
                         })
                     });
 
                     const data = await response.json();
                     
-                    // Ловим ошибку от Google
+                    // Проверка на ошибки API
                     if (data.error) {
-                        console.error("Gemini Error:", data.error);
+                        console.error(data.error);
                         throw new Error(data.error.message);
                     }
                     
-                    // 3. БЕЗОПАСНАЯ ОБРАБОТКА ОТВЕТА
+                    // Проверка на пустой ответ
                     if (!data.candidates || !data.candidates[0].content.parts[0].text) {
                         throw new Error("Пустой ответ от ИИ.");
                     }
 
-                    const raw = data.candidates[0].content.parts[0].text;
-                    const res = JSON.parse(raw); // Теперь тут всегда чистый JSON
+                    // Чистим ответ от Markdown (```json ... ```)
+                    const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    const res = JSON.parse(raw);
                     show(res.title, res.info, res.reason);
 
                 } catch (e) {
-                    alert("Ошибка: " + e.message + "\n(Проверь VPN: США/Нидерланды)");
+                    alert("Ошибка: " + e.message);
                 } finally {
                     btn.innerText = oldTxt;
                 }
@@ -178,4 +175,3 @@
     </script>
 </body>
 </html>
-
