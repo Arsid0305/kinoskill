@@ -61,11 +61,11 @@
     </div>
 
     <script>
-        // --- ВСТАВЛЯЙ СЮДА НОВЫЙ КЛЮЧ ---
+        // --- 1. ВСТАВЬ ЧАСТИ КЛЮЧА НИЖЕ ---
         const part1 = "AIzaSyCZJQzvup"; 
         const part2 = "MbbOWLwltXkPvA2EHMKUd9jao";
+        // -----------------------------------
         const API_KEY = part1 + part2;
-        // --------------------------------
 
         let mode = 'local';
         let db = [];
@@ -123,8 +123,8 @@
                 const prompt = `Посоветуй 1 фильм. Настроение: ${picks.mood || 'любое'}. Жанр: ${picks.genre || 'любой'}. Ответ JSON: {"title":"Название","info":"Год, Жанр","reason":"Почему"}`;
 
                 try {
-                    // ВЕРНУЛ v1beta, так как 1.5-flash живет там. Ссылка теперь точная.
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                    // ИСПОЛЬЗУЕМ ТОЧНУЮ ВЕРСИЮ МОДЕЛИ (001), ЧТОБЫ ИЗБЕЖАТЬ ОШИБКИ "NOT FOUND"
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=${API_KEY}`;
                     
                     const response = await fetch(url, {
                         method: 'POST',
@@ -133,13 +133,23 @@
                     });
 
                     const data = await response.json();
-                    if(data.error) throw new Error(data.error.message);
+                    
+                    // ТЕПЕРЬ МЫ ЛОВИМ ОШИБКУ ОТ GOOGLE КРАСИВО
+                    if (data.error) {
+                        throw new Error(`Google API Error: ${data.error.message}`);
+                    }
+                    
+                    if (!data.candidates || !data.candidates[0]) {
+                         throw new Error("ИИ прислал пустой ответ (попробуй еще раз)");
+                    }
 
                     const raw = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
                     const res = JSON.parse(raw);
                     show(res.title, res.info, res.reason);
+
                 } catch (e) {
-                    alert("Ошибка: " + e.message);
+                    // Выводим понятную ошибку
+                    alert("⚠️ ОШИБКА:\n" + e.message);
                 } finally {
                     btn.innerText = oldTxt;
                 }
