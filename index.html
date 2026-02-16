@@ -61,10 +61,11 @@
     </div>
 
     <script>
-        // ЗАЩИТА КЛЮЧА (Раздели новый ключ на 2 части)
+        // --- ВСТАВЛЯЙ СЮДА НОВЫЙ КЛЮЧ ---
         const part1 = "AIzaSyCZJQzvup"; 
         const part2 = "MbbOWLwltXkPvA2EHMKUd9jao";
         const API_KEY = part1 + part2;
+        // --------------------------------
 
         let mode = 'local';
         let db = [];
@@ -122,8 +123,9 @@
                 const prompt = `Посоветуй 1 фильм. Настроение: ${picks.mood || 'любое'}. Жанр: ${picks.genre || 'любой'}. Ответ JSON: {"title":"Название","info":"Год, Жанр","reason":"Почему"}`;
 
                 try {
-                    // ИСПРАВЛЕННЫЙ URL (v1/models/gemini-1.5-flash)
-                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                    // ВЕРНУЛ v1beta, так как 1.5-flash живет там. Ссылка теперь точная.
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                    
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
